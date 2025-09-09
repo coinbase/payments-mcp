@@ -20,7 +20,7 @@ PaymentsMCPInstaller (Orchestrator)
 
 **Key Responsibilities**:
 - Fetches local version from installed package.json
-- Retrieves remote version from `https://paymentsmcp.coinbase.com/api/version`
+- Retrieves remote version from `https://payments-mcp.coinbase.com/api/version`
 - Compares versions using semver to determine if updates are needed
 - Validates version format and provides formatted output
 

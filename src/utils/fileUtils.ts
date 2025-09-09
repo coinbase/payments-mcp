@@ -24,7 +24,9 @@ export class FileUtils {
       await fs.ensureDir(dirPath);
       this.logger.debug(`Ensured directory exists: ${dirPath}`);
     } catch (error) {
-      throw new Error(`Failed to create directory ${dirPath}: ${(error as Error).message}`);
+      throw new Error(
+        `Failed to create directory ${dirPath}: ${(error as Error).message}`
+      );
     }
   }
 
@@ -35,30 +37,36 @@ export class FileUtils {
         this.logger.debug(`Removed directory: ${dirPath}`);
       }
     } catch (error) {
-      throw new Error(`Failed to remove directory ${dirPath}: ${(error as Error).message}`);
+      throw new Error(
+        `Failed to remove directory ${dirPath}: ${(error as Error).message}`
+      );
     }
   }
 
-  async readJsonFile<T = any>(filePath: string): Promise<T> {
+  async readJsonFile<T = unknown>(filePath: string): Promise<T> {
     try {
       const content = await fs.readFile(filePath, 'utf8');
       return JSON.parse(content);
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
+      if ((error as { code?: string }).code === 'ENOENT') {
         throw new Error(`File not found: ${filePath}`);
       }
-      throw new Error(`Failed to read JSON file ${filePath}: ${(error as Error).message}`);
+      throw new Error(
+        `Failed to read JSON file ${filePath}: ${(error as Error).message}`
+      );
     }
   }
 
-  async writeJsonFile(filePath: string, data: any): Promise<void> {
+  async writeJsonFile(filePath: string, data: unknown): Promise<void> {
     try {
       const dirPath = path.dirname(filePath);
       await this.ensureDir(dirPath);
       await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
       this.logger.debug(`Written JSON file: ${filePath}`);
     } catch (error) {
-      throw new Error(`Failed to write JSON file ${filePath}: ${(error as Error).message}`);
+      throw new Error(
+        `Failed to write JSON file ${filePath}: ${(error as Error).message}`
+      );
     }
   }
 
@@ -66,10 +74,12 @@ export class FileUtils {
     try {
       return await fs.readFile(filePath, 'utf8');
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
+      if ((error as { code?: string }).code === 'ENOENT') {
         throw new Error(`File not found: ${filePath}`);
       }
-      throw new Error(`Failed to read file ${filePath}: ${(error as Error).message}`);
+      throw new Error(
+        `Failed to read file ${filePath}: ${(error as Error).message}`
+      );
     }
   }
 
@@ -80,7 +90,9 @@ export class FileUtils {
       await fs.writeFile(filePath, content, 'utf8');
       this.logger.debug(`Written file: ${filePath}`);
     } catch (error) {
-      throw new Error(`Failed to write file ${filePath}: ${(error as Error).message}`);
+      throw new Error(
+        `Failed to write file ${filePath}: ${(error as Error).message}`
+      );
     }
   }
 
@@ -91,7 +103,9 @@ export class FileUtils {
       await fs.copy(sourcePath, destPath);
       this.logger.debug(`Copied file from ${sourcePath} to ${destPath}`);
     } catch (error) {
-      throw new Error(`Failed to copy file from ${sourcePath} to ${destPath}: ${(error as Error).message}`);
+      throw new Error(
+        `Failed to copy file from ${sourcePath} to ${destPath}: ${(error as Error).message}`
+      );
     }
   }
 
@@ -99,7 +113,9 @@ export class FileUtils {
     try {
       return await fs.stat(filePath);
     } catch (error) {
-      throw new Error(`Failed to get file stats for ${filePath}: ${(error as Error).message}`);
+      throw new Error(
+        `Failed to get file stats for ${filePath}: ${(error as Error).message}`
+      );
     }
   }
 
@@ -125,17 +141,19 @@ export class FileUtils {
     try {
       const items = await fs.readdir(dirPath);
       const files: string[] = [];
-      
+
       for (const item of items) {
         const itemPath = path.join(dirPath, item);
         if (await this.isFile(itemPath)) {
           files.push(item);
         }
       }
-      
+
       return files;
     } catch (error) {
-      throw new Error(`Failed to list files in ${dirPath}: ${(error as Error).message}`);
+      throw new Error(
+        `Failed to list files in ${dirPath}: ${(error as Error).message}`
+      );
     }
   }
 
@@ -154,10 +172,11 @@ export class FileUtils {
         this.logger.debug(`Cleaned up temp file: ${filePath}`);
       }
     } catch (error) {
-      this.logger.warn(`Failed to cleanup temp file ${filePath}: ${(error as Error).message}`);
+      this.logger.warn(
+        `Failed to cleanup temp file ${filePath}: ${(error as Error).message}`
+      );
     }
   }
-
 
   sanitizeFilename(filename: string): string {
     return filename.replace(/[^a-z0-9.-]/gi, '_').toLowerCase();

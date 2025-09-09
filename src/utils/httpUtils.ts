@@ -19,11 +19,14 @@ export class HttpUtils {
   private getHttpsAgent(): https.Agent {
     // For development environments, we may need to handle self-signed certificates
     // In production, this should be more restrictive
-    const isDevelopment = process.env.NODE_ENV === 'development' || 
-                         process.env.PAYMENTS_MCP_ALLOW_INSECURE_TLS === 'true';
-    
+    const isDevelopment =
+      process.env.NODE_ENV === 'development' ||
+      process.env.PAYMENTS_MCP_ALLOW_INSECURE_TLS === 'true';
+
     if (isDevelopment) {
-      this.logger.debug('Using relaxed SSL verification for development environment');
+      this.logger.debug(
+        'Using relaxed SSL verification for development environment'
+      );
       return new https.Agent({
         rejectUnauthorized: false, // Allow self-signed certificates in dev
       });
@@ -35,7 +38,7 @@ export class HttpUtils {
   }
 
   private async sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   private async executeWithRetry<T>(
@@ -50,13 +53,15 @@ export class HttpUtils {
         return await operation();
       } catch (error) {
         lastError = error as Error;
-        
+
         if (attempt === opts.retries) {
           throw lastError;
         }
 
         const delay = opts.retryDelay * Math.pow(2, attempt - 1);
-        this.logger.debug(`Request failed (attempt ${attempt}/${opts.retries}), retrying in ${delay}ms...`);
+        this.logger.debug(
+          `Request failed (attempt ${attempt}/${opts.retries}), retrying in ${delay}ms...`
+        );
         await this.sleep(delay);
       }
     }
@@ -64,7 +69,10 @@ export class HttpUtils {
     throw lastError!;
   }
 
-  async get<T = any>(url: string, options: Partial<HttpRetryOptions> = {}): Promise<AxiosResponse<T>> {
+  async get<T = unknown>(
+    url: string,
+    options: Partial<HttpRetryOptions> = {}
+  ): Promise<AxiosResponse<T>> {
     return this.executeWithRetry(async () => {
       const config: AxiosRequestConfig = {
         timeout: options.timeout || this.defaultRetryOptions.timeout,
@@ -82,7 +90,11 @@ export class HttpUtils {
   async downloadFile(
     url: string,
     filePath: string,
-    onProgress?: (progress: { transferred: number; total: number; percent: number }) => void,
+    onProgress?: (progress: {
+      transferred: number;
+      total: number;
+      percent: number;
+    }) => void,
     options: Partial<HttpRetryOptions> = {}
   ): Promise<void> {
     return this.executeWithRetry(async () => {
@@ -97,12 +109,15 @@ export class HttpUtils {
 
       this.logger.debug(`Downloading ${url} to ${filePath}`);
       const response = await axios.get(url, config);
-      
-      const totalLength = parseInt(response.headers['content-length'] || '0', 10);
+
+      const totalLength = parseInt(
+        response.headers['content-length'] || '0',
+        10
+      );
       let transferredLength = 0;
 
       const writeStream = fs.createWriteStream(filePath);
-      
+
       return new Promise<void>((resolve, reject) => {
         response.data.on('data', (chunk: Buffer) => {
           transferredLength += chunk.length;
@@ -136,7 +151,10 @@ export class HttpUtils {
     }, options);
   }
 
-  async head(url: string, options: Partial<HttpRetryOptions> = {}): Promise<AxiosResponse> {
+  async head(
+    url: string,
+    options: Partial<HttpRetryOptions> = {}
+  ): Promise<AxiosResponse> {
     return this.executeWithRetry(async () => {
       const config: AxiosRequestConfig = {
         timeout: options.timeout || this.defaultRetryOptions.timeout,
@@ -151,38 +169,50 @@ export class HttpUtils {
     }, options);
   }
 
-  isNetworkError(error: any): boolean {
-    return (
-      error.code === 'ECONNRESET' ||
-      error.code === 'ENOTFOUND' ||
-      error.code === 'ECONNREFUSED' ||
-      error.code === 'ETIMEDOUT' ||
-      error.code === 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY' ||
-      error.code === 'SELF_SIGNED_CERT_IN_CHAIN' ||
-      error.code === 'CERT_HAS_EXPIRED' ||
-      (error.response && error.response.status >= 500)
+  isNetworkError(error: unknown): boolean {
+    const err = error as {
+      code?: string;
+      response?: { status: number };
+      request?: unknown;
+      message?: string;
+    };
+    return !!(
+      err.code === 'ECONNRESET' ||
+      err.code === 'ENOTFOUND' ||
+      err.code === 'ECONNREFUSED' ||
+      err.code === 'ETIMEDOUT' ||
+      err.code === 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY' ||
+      err.code === 'SELF_SIGNED_CERT_IN_CHAIN' ||
+      err.code === 'CERT_HAS_EXPIRED' ||
+      (err.response && err.response.status >= 500)
     );
   }
 
-  getErrorMessage(error: any): string {
-    if (error.response) {
-      return `HTTP ${error.response.status}: ${error.response.statusText}`;
+  getErrorMessage(error: unknown): string {
+    const err = error as {
+      code?: string;
+      response?: { status: number; statusText?: string };
+      request?: unknown;
+      message?: string;
+    };
+    if (err.response) {
+      return `HTTP ${err.response.status}: ${err.response.statusText || 'Unknown Error'}`;
     }
-    
+
     // Handle SSL/TLS certificate errors
-    if (error.code === 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY') {
+    if (err.code === 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY') {
       return 'SSL certificate verification failed. For development servers, set PAYMENTS_MCP_ALLOW_INSECURE_TLS=true';
     }
-    if (error.code === 'SELF_SIGNED_CERT_IN_CHAIN') {
+    if (err.code === 'SELF_SIGNED_CERT_IN_CHAIN') {
       return 'Self-signed certificate detected. For development servers, set PAYMENTS_MCP_ALLOW_INSECURE_TLS=true';
     }
-    if (error.code === 'CERT_HAS_EXPIRED') {
+    if (err.code === 'CERT_HAS_EXPIRED') {
       return 'SSL certificate has expired. Please contact the server administrator';
     }
-    
-    if (error.request) {
+
+    if (err.request) {
       return 'Network request failed - please check your internet connection';
     }
-    return error.message || 'Unknown error occurred';
+    return err.message || 'Unknown error occurred';
   }
 }

@@ -27,7 +27,9 @@ export class VersionService {
         return null;
       }
 
-      const packageJson = await this.fileUtils.readJsonFile(paths.packageJsonPath);
+      const packageJson = await this.fileUtils.readJsonFile<{
+        version?: string;
+      }>(paths.packageJsonPath);
       const version = packageJson.version;
       
       if (!version) {

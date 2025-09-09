@@ -70,7 +70,10 @@ export class InstallService {
         }
       }
 
-      const packageJson = await this.fileUtils.readJsonFile(path.join(projectPath, 'package.json'));
+      const packageJson = await this.fileUtils.readJsonFile<{
+        name?: string;
+        version?: string;
+      }>(path.join(projectPath, 'package.json'));
       if (!packageJson.name || !packageJson.version) {
         this.logger.debug('Verification failed: Invalid package.json structure');
         return false;
@@ -92,7 +95,10 @@ export class InstallService {
         return null;
       }
 
-      const packageJson = await this.fileUtils.readJsonFile(packageJsonPath);
+      const packageJson = await this.fileUtils.readJsonFile<{
+        name?: string;
+        version?: string;
+      }>(packageJsonPath);
       
       if (!packageJson.name || !packageJson.version) {
         return null;

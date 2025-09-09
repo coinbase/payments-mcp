@@ -1,163 +1,420 @@
-# x402-MCP
+# @coinbase/payments-mcp
 
-## Development
+A TypeScript-based npx installer for the payments-mcp project, providing seamless Claude Desktop integration for cryptocurrency payments functionality.
 
-```bash
-pnpm install && node node_modules/electron/install.js
-```
+## Quick Start
 
-Develop the electron app
+Install and configure payments-mcp with a single command:
 
 ```bash
-pnpm run dev
+npx payments-mcp
 ```
 
-Run the mcp server (rebuilds assets and starts the mcp server + electron app)
+## Features
+
+- ✅ **One-Command Installation**: Complete setup with `npx payments-mcp`
+- 🔄 **Automatic Updates**: Checks for and installs the latest version
+- 🌐 **Cross-Platform**: Works on macOS, Windows, and Linux
+- 🛡️ **Safe & Secure**: Downloads over HTTPS with integrity validation
+- 📦 **Self-Contained**: Manages dependencies and configuration automatically
+- 🔧 **Claude Desktop Integration**: Generates ready-to-use configuration
+
+## Requirements
+
+- Node.js 22.0.0 or higher
+- npm (included with Node.js)
+- Internet connection for downloading packages
+
+## Usage
+
+### Installation
+
+Install the latest version of payments-mcp:
 
 ```bash
-pnpm run build   # builds the assets
-pnpm run mcp     # starts the mcp server + electron app using the built assets
+npx payments-mcp
 ```
 
-Add as an MCP server for Claude, in `claude_desktop_config.json` (`cmd + ,` -> Developer -> Edit Config)
+### Commands
 
+```bash
+# Default installation (same as 'install')
+npx payments-mcp
+
+# Explicit install command
+npx payments-mcp install
+
+# Force reinstallation (even if up to date)
+npx payments-mcp install --force
+
+# Check installation status
+npx payments-mcp status
+
+# Uninstall payments-mcp
+npx payments-mcp uninstall
+
+# Enable verbose logging for any command
+npx payments-mcp install --verbose
+npx payments-mcp status --verbose
+```
+
+### Options
+
+- `--verbose, -v`: Enable detailed logging output
+- `--force, -f`: Force reinstallation even if already up to date
+- `--help, -h`: Show help information
+
+## How It Works
+
+The installer orchestrates a multi-step process using its layered architecture:
+
+### Installation Workflow
+
+```
+CLI Command → Orchestrator → Services → Utilities
+     ↓             ↓           ↓          ↓
+[parse args] → [coordinate] → [execute] → [foundation]
+```
+
+**Detailed Flow**:
+
+1. **CLI Processing** (`cli.ts`)
+   - Commander.js parses command and options
+   - Creates Logger with verbose setting
+   - Instantiates PaymentsMCPInstaller
+   - Calls appropriate method (install/status/uninstall)
+
+2. **Pre-flight Checks** (Orchestrator → InstallService → PathUtils)
+   - Verify Node.js executable availability
+   - Check npm command accessibility  
+   - Test network connectivity to download server
+
+3. **Version Analysis** (Orchestrator → VersionService → HttpUtils)
+   - Read local package.json using FileUtils
+   - Fetch remote version from API using HttpUtils
+   - Compare versions with semver logic
+   - Determine if update is needed
+
+4. **Download Phase** (Orchestrator → DownloadService → HttpUtils/FileUtils)
+   - Download ZIP package with progress tracking
+   - Validate download integrity
+   - Securely extract with path sanitization
+   - Cleanup temporary download files
+
+5. **Installation Phase** (Orchestrator → InstallService → PathUtils)
+   - Execute `npm install` in extracted directory
+   - Run electron installer if available
+   - Verify installation success
+
+6. **Configuration** (Orchestrator → ConfigService → PathUtils)
+   - Generate Claude Desktop MCP server config
+   - Display setup instructions to user
+   - Provide troubleshooting information
+
+### Service Coordination Example
+
+```typescript
+// Orchestrator delegates to services
+async install(options: InstallOptions): Promise<void> {
+  // 1. Check prerequisites  
+  await this.performPreflightChecks();
+  
+  // 2. Version comparison
+  const versionInfo = await this.versionService.getVersionInfo();
+  
+  // 3. Download if needed
+  if (versionInfo.needsUpdate) {
+    await this.downloadService.downloadAndExtract(installPath);
+    
+    // 4. Install dependencies
+    await this.installService.runNpmInstall(installPath);
+    
+    // 5. Generate configuration
+    const config = this.configService.generateClaudeConfig(installPath);
+    this.configService.displayConfigInstructions(config);
+  }
+}
+```
+
+### Cross-Cutting Concerns
+
+**Error Handling**:
+- Utilities throw descriptive errors
+- Services catch and add context
+- Orchestrator handles cleanup and user feedback
+
+**Logging**:
+- All components receive shared Logger instance
+- Consistent output formatting across layers
+- Debug information available in verbose mode
+
+**Security**:
+- Path sanitization in utilities
+- Safe file operations in services  
+- Input validation throughout the stack
+
+## Claude Desktop Setup
+
+After successful installation, the installer will display configuration instructions. You need to:
+
+1. Open Claude Desktop application
+2. Go to Settings → Developer → MCP Servers
+3. Add the provided configuration
+4. Restart Claude Desktop
+
+Example configuration:
 ```json
 {
   "mcpServers": {
-    "x402-wallet": {
-      "command": "pnpm",
-      "args": [
-        "--silent",
-        "-C",
-        "<absolute path to this repo>/examples/typescript/mcp-embedded-wallet",
-        "run",
-        "mcp"
-      ],
-      "env": {}
+    "payments-mcp": {
+      "command": "npm",
+      "args": ["-c", "run", "node_modules/.bin/electron bundle.js"],
+      "env": {
+        "WALLET_UI_URL": "https://paymentsmcp.coinbase.com"
+      }
     }
   }
 }
 ```
 
-Then restart Claude.
+## File Locations
 
-Note that Claude will run an instance of the MCP server on startup, so you don't need to have it running in the background. You will need to rebuild the assets and restart Claude in order to see changes.
+- **Installation Directory**: `~/.payments-mcp/`
+- **Configuration Files**: Generated during installation
+- **Logs**: Displayed in terminal (use `--verbose` for detailed logs)
 
-## How does this work?
+## Troubleshooting
 
-This is an mcp server that also happens to be an electron app. It uses an embedded wallet stored in
-the electron browser process to sign requests while being sandboxed from the rest of the OS. The MCP server can request signatures via the main process <-> renderer process IPC bridge.
+### Common Issues
 
-Basically there are 2 processes (the mcp server + electron main process) and the electron renderer (which is a chromium browser window), communication between them looks like this:
+**"Command not found" Error**
+- Ensure npm is in your system PATH
+- Try running `npm --version` to verify npm installation
 
-```mermaid
-sequenceDiagram
-    actor Human
-    participant Claude
-    participant mcpServer
-    participant electronRenderer
+**"Permission denied" Error**
+- On macOS/Linux: Check file permissions in the installation directory
+- On Windows: Try running as administrator
 
-    Human ->> Claude: Sign a message
-    Claude ->> mcpServer: use tool sign_message
-    mcpServer ->> electronRenderer: IPC `signMessage(message)`
-    electronRenderer ->> electronRenderer: signs message with embedded wallet
-    electronRenderer ->> mcpServer: signed message
-    mcpServer ->> Claude: signed message
-    Claude ->> Human: "I have signed your message: 0x..."
+**"Module not found" Error**
+- Re-run the installer to download the latest version
+- Use `--force` flag to force reinstallation
+
+**Network Issues**
+- Check your firewall and proxy settings
+- Ensure access to `payments-mcp-dev.cbhq.net`
+
+**SSL Certificate Issues**
+- For development servers with self-signed certificates, set: `PAYMENTS_MCP_ALLOW_INSECURE_TLS=true`
+- Example: `PAYMENTS_MCP_ALLOW_INSECURE_TLS=true npx payments-mcp`
+
+### Debug Mode
+
+For detailed troubleshooting information, run with verbose logging:
+
+```bash
+npx payments-mcp install --verbose
 ```
 
-How do I add a new capability that gets exposed via MCP to Claude?
+### Getting Help
 
-Great question. Right now you need to change a few files.
+1. Check the status of your installation:
+   ```bash
+   npx payments-mcp status
+   ```
 
-1. `preload.ts` - this is run on electron window creation and registers functions in the namespace allowing for IPC. You need to add a new IPC callback here. This code is executed in the electron window (exposed via `window.electron`)
+2. View detailed logs with `--verbose` flag
 
+3. For additional support, visit: [GitHub Issues](https://github.com/coinbase/payments-mcp/issues)
+
+## Development
+
+### Building from Source
+
+```bash
+# Install dependencies
+npm install
+
+# Build TypeScript
+npm run build
+
+# Test locally
+npm run dev
+
+# Format code
+npm run format
+
+# Lint code
+npm run lint
+```
+
+## Architecture Overview
+
+The installer follows a layered architecture with clear separation of concerns:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     CLI Layer                           │
+│  ┌───────────────────────────────────────────────────┐ │
+│  │  cli.ts - Commander.js interface                  │ │
+│  │  Commands: install, status, uninstall            │ │
+│  └───────────────────────────────────────────────────┘ │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────┐
+│                 Orchestrator                            │
+│  ┌───────────────────────────────────────────────────┐ │
+│  │  installer.ts - PaymentsMCPInstaller             │ │
+│  │  Coordinates installation workflow               │ │
+│  └───────────────────────────────────────────────────┘ │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────┐
+│                 Services Layer                          │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐│
+│  │Version      │ │Download     │ │Install & Config     ││
+│  │Service      │ │Service      │ │Services             ││
+│  └─────────────┘ └─────────────┘ └─────────────────────┘│
+└─────────────────────┬───────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────┐
+│                 Utilities Layer                         │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐│
+│  │Logger       │ │HttpUtils    │ │FileUtils & PathUtils││
+│  │             │ │             │ │                     ││
+│  └─────────────┘ └─────────────┘ └─────────────────────┘│
+└─────────────────────────────────────────────────────────┘
+```
+
+## Component Breakdown
+
+### CLI Layer (`cli.ts`)
+
+The command-line interface built with Commander.js that provides:
+
+- **Command Parsing**: Handles `install`, `status`, and `uninstall` commands
+- **Option Processing**: Manages `--verbose`, `--force` flags
+- **Help System**: Auto-generated help text with examples
+- **Default Behavior**: No command defaults to `install`
+
+**Key Features**:
+```bash
+npx install-payments-mcp install --force --verbose
+npx install-payments-mcp status
+npx install-payments-mcp uninstall
+```
+
+### Orchestrator (`installer.ts`)
+
+The `PaymentsMCPInstaller` class coordinates the entire installation workflow:
+
+**Installation Flow**:
+1. **Pre-flight Checks** - Verify Node.js, npm, and network availability
+2. **Version Comparison** - Check if installation/update is needed
+3. **Download Phase** - Download and extract the payments-mcp package
+4. **Installation Phase** - Run npm install and electron setup
+5. **Configuration** - Generate Claude Desktop MCP server config
+6. **Cleanup** - Handle errors and cleanup temporary files
+
+**Core Methods**:
 ```typescript
-contextBridge.exposeInMainWorld("electron", {
-  OnSignMessage: callback =>
-    ipcRenderer.on("sign-message", (event, message) => {
-      callback(message).then(signature => {
-        console.log("sign-message-response", signature);
-        // Send message back to main process
-        ipcRenderer.send("sign-message-response", signature);
-      });
-    }),
-  // Above: existing full example. Below: your fancy new thing ( the most minimal example)
-  OnMyNewIPCHandler: callback => icpRenderer.on("my-message", (event, message) => {
-    callback(message)
-  });
-  // Gotchya: functions can't use async syntax
-});
+async install(options: InstallOptions): Promise<void>
+async getStatus(): Promise<void>  
+async uninstall(): Promise<void>
 ```
 
-If you want bi-dreictional communication you need something like `ipcRenderer.send("sign-message-response", signature);`
+The orchestrator delegates specific tasks to services while managing the overall workflow and error handling.
 
-2. implement the callback in `src/ipc.ts`, then register it in `src/main.tsx`. The function in `ipc.ts` can
-   be a full TS async function, but it is executed outside to context of the react render tree (using zustand stores for state syncing to react is recommended)
+### Services Layer
 
-```typescript
-// src/ipc.ts
-export async function myNewIPCHandler() {
-  // ...
-}
+Located in `src/services/` - each service handles a specific domain:
 
-// src/main.ts
-window.electron.OnSignMessage(signMessage);
-window.electron.OnMyNewIPCHandlder(myNewIPCHand;er)
+#### VersionService
+- Compares local vs remote package versions using semantic versioning
+- Fetches version info from `https://paymentsmcp.coinbase.com/api/version`
+- Determines if updates are needed
+
+#### DownloadService  
+- Downloads packages from `https://paymentsmcp.coinbase.com/payments-mcp.zip`
+- Securely extracts ZIP files with path sanitization
+- Provides download progress feedback
+
+#### InstallService
+- Executes `npm install` in the extracted package directory
+- Runs electron installer if available
+- Verifies successful installation
+
+#### ConfigService
+- Generates Claude Desktop MCP server configuration
+- Provides cross-platform config file paths
+- Displays setup instructions to users
+
+**See [`src/services/README.md`](src/services/README.md) for detailed service documentation.**
+
+### Utilities Layer
+
+Located in `src/utils/` - provides foundational functionality:
+
+#### Logger
+- Colored terminal output using chalk
+- Debug mode support with verbose flag
+- Progress indicators for long operations
+
+#### HttpUtils
+- HTTP client with automatic retry logic
+- Download progress tracking
+- Comprehensive error handling
+
+#### FileUtils
+- Safe file system operations
+- JSON file handling
+- Temporary file management with cleanup
+
+#### PathUtils
+- Cross-platform path utilities
+- Path sanitization for security
+- Platform-specific executable detection
+
+**See [`src/utils/README.md`](src/utils/README.md) for detailed utility documentation.**
+
+### Project Structure
+
+```
+src/
+├── cli.ts                    # CLI entry point with Commander.js
+├── installer.ts              # Main orchestrator class
+├── types/
+│   └── index.ts             # TypeScript interfaces and types
+├── services/                # Business logic layer
+│   ├── README.md           # Service layer documentation
+│   ├── versionService.ts   # Version checking and comparison
+│   ├── downloadService.ts  # Package download and extraction
+│   ├── installService.ts   # npm/electron installation
+│   ├── configService.ts    # Claude Desktop configuration
+│   └── __tests__/          # Service unit tests
+└── utils/                  # Utility layer
+    ├── README.md          # Utility layer documentation  
+    ├── logger.ts          # Colored terminal output
+    ├── httpUtils.ts       # HTTP client with retry logic
+    ├── fileUtils.ts       # Safe file operations
+    ├── pathUtils.ts       # Cross-platform path utilities
+    └── __tests__/         # Utility unit tests
 ```
 
-We now have everything we need on the renderer side.
+## Security
 
-3. Set up call from electron
+- Downloads are performed over HTTPS only
+- File paths are sanitized to prevent directory traversal
+- ZIP extraction validates file paths for safety
+- Temporary files are cleaned up after installation
 
-Call from electron live in `operations` in `electron.ts` just for convinience.
-You might add something like this
+## License
 
-```typescript
-  myNewIPCHandler: {
-    title: "My New IPC Handler",
-    description: "My new IPC handler",
-    tool: async (message: string): Promise<string> => {
-      logger.info("myNewIPCHandler called", message);
-      mainWindow?.webContents.send("my-message", message);
-      return new Promise(resolve => {
-        ipcMain.once("my-message-response", (event, response) => {
-          logger.info("my-message-response from main", response);
-          resolve(response);
-        });
-      });
-    },
-  },
-```
+MIT License - see LICENSE file for details.
 
-The key lines are
+## Contributing
 
-```typescript
-// Send a message via IPC to the OnMyNewIPCHandler callback we instrumented
-mainWindow?.webContents.send("my-message", message);
+Contributions are welcome! Please read the contributing guidelines and submit pull requests to the main repository.
 
-// (optional) wait for a response. Note: .once vs .on
-ipcMain.once("my-message-response", (event, response) => {});
-```
+---
 
-4. Expose calls via MCP
-
-You now have a function `operations.myNewIPCHandler.tool` that can be called from the node process, but accesses state in the browser context. And you can call it from the MCP server.
-
-```typescript
-server.registerTool(
-  "sign_message",
-  {
-    title: operations.signMessage.title,
-    description: operations.signMessage.description,
-  },
-  async () => {
-    logger.info("sign_message tool called");
-    return {
-      content: [
-        { type: "text", text: await operations.signMessage.tool("hello") },
-      ],
-    };
-  }
-);
-```
+**Note**: This installer is designed specifically for the payments-mcp project and Claude Desktop integration. For other MCP servers, please refer to their respective installation instructions.

@@ -20,19 +20,21 @@ describe('FileUtils', () => {
 
   describe('exists', () => {
     it('should return true when file exists', async () => {
-      mockFs.access.mockResolvedValueOnce();
-      
+      mockFs.access.mockImplementation(() => Promise.resolve());
+
       const result = await fileUtils.exists('/path/to/file');
-      
+
       expect(result).toBe(true);
       expect(mockFs.access).toHaveBeenCalledWith('/path/to/file');
     });
 
     it('should return false when file does not exist', async () => {
-      mockFs.access.mockRejectedValueOnce(new Error('File not found'));
-      
+      mockFs.access.mockImplementation(() =>
+        Promise.reject(new Error('File not found'))
+      );
+
       const result = await fileUtils.exists('/path/to/nonexistent');
-      
+
       expect(result).toBe(false);
       expect(mockFs.access).toHaveBeenCalledWith('/path/to/nonexistent');
     });
@@ -40,18 +42,20 @@ describe('FileUtils', () => {
 
   describe('ensureDir', () => {
     it('should create directory successfully', async () => {
-      mockFs.ensureDir.mockResolvedValueOnce();
-      
+      mockFs.ensureDir.mockImplementation(() => Promise.resolve());
+
       await fileUtils.ensureDir('/path/to/dir');
-      
+
       expect(mockFs.ensureDir).toHaveBeenCalledWith('/path/to/dir');
-      expect(mockLogger.debug).toHaveBeenCalledWith('Ensured directory exists: /path/to/dir');
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'Ensured directory exists: /path/to/dir'
+      );
     });
 
     it('should throw error when directory creation fails', async () => {
       const error = new Error('Permission denied');
-      mockFs.ensureDir.mockRejectedValueOnce(error);
-      
+      mockFs.ensureDir.mockImplementation(() => Promise.reject(error));
+
       await expect(fileUtils.ensureDir('/path/to/dir')).rejects.toThrow(
         'Failed to create directory /path/to/dir: Permission denied'
       );
@@ -60,28 +64,32 @@ describe('FileUtils', () => {
 
   describe('removeDir', () => {
     it('should remove existing directory', async () => {
-      mockFs.access.mockResolvedValueOnce(); // exists returns true
-      mockFs.remove.mockResolvedValueOnce();
-      
+      mockFs.access.mockImplementation(() => Promise.resolve()); // exists returns true
+      mockFs.remove.mockImplementation(() => Promise.resolve());
+
       await fileUtils.removeDir('/path/to/dir');
-      
+
       expect(mockFs.remove).toHaveBeenCalledWith('/path/to/dir');
-      expect(mockLogger.debug).toHaveBeenCalledWith('Removed directory: /path/to/dir');
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'Removed directory: /path/to/dir'
+      );
     });
 
     it('should not remove non-existent directory', async () => {
-      mockFs.access.mockRejectedValueOnce(new Error('Not found')); // exists returns false
-      
+      mockFs.access.mockImplementation(() =>
+        Promise.reject(new Error('Not found'))
+      ); // exists returns false
+
       await fileUtils.removeDir('/path/to/nonexistent');
-      
+
       expect(mockFs.remove).not.toHaveBeenCalled();
     });
 
     it('should throw error when directory removal fails', async () => {
-      mockFs.access.mockResolvedValueOnce(); // exists returns true
+      mockFs.access.mockImplementation(() => Promise.resolve()); // exists returns true
       const error = new Error('Permission denied');
-      mockFs.remove.mockRejectedValueOnce(error);
-      
+      mockFs.remove.mockImplementation(() => Promise.reject(error));
+
       await expect(fileUtils.removeDir('/path/to/dir')).rejects.toThrow(
         'Failed to remove directory /path/to/dir: Permission denied'
       );
@@ -91,72 +99,87 @@ describe('FileUtils', () => {
   describe('readJsonFile', () => {
     it('should read and parse JSON file successfully', async () => {
       const mockData = { test: 'data' };
-      mockFs.readFile.mockResolvedValueOnce(JSON.stringify(mockData));
-      
+      mockFs.readFile.mockImplementation(() =>
+        Promise.resolve(JSON.stringify(mockData))
+      );
+
       const result = await fileUtils.readJsonFile('/path/to/file.json');
-      
+
       expect(result).toEqual(mockData);
-      expect(mockFs.readFile).toHaveBeenCalledWith('/path/to/file.json', 'utf8');
+      expect(mockFs.readFile).toHaveBeenCalledWith(
+        '/path/to/file.json',
+        'utf8'
+      );
     });
 
     it('should throw error for invalid JSON', async () => {
-      mockFs.readFile.mockResolvedValueOnce('invalid json');
-      
-      await expect(fileUtils.readJsonFile('/path/to/file.json')).rejects.toThrow(
-        /Failed to read JSON file/
-      );
+      mockFs.readFile.mockImplementation(() => Promise.resolve('invalid json'));
+
+      await expect(
+        fileUtils.readJsonFile('/path/to/file.json')
+      ).rejects.toThrow(/Failed to read JSON file/);
     });
 
     it('should throw error when file read fails', async () => {
-      mockFs.readFile.mockRejectedValueOnce(new Error('File not found'));
-      
-      await expect(fileUtils.readJsonFile('/path/to/file.json')).rejects.toThrow(
-        /Failed to read JSON file/
+      mockFs.readFile.mockImplementation(() =>
+        Promise.reject(new Error('File not found'))
       );
+
+      await expect(
+        fileUtils.readJsonFile('/path/to/file.json')
+      ).rejects.toThrow(/Failed to read JSON file/);
     });
   });
 
   describe('writeJsonFile', () => {
     it('should write JSON file successfully', async () => {
       const mockData = { test: 'data' };
-      mockFs.writeFile.mockResolvedValueOnce();
-      
+      mockFs.writeFile.mockImplementation(() => Promise.resolve());
+
       await fileUtils.writeJsonFile('/path/to/file.json', mockData);
-      
+
       expect(mockFs.writeFile).toHaveBeenCalledWith(
         '/path/to/file.json',
         JSON.stringify(mockData, null, 2),
         'utf8'
       );
-      expect(mockLogger.debug).toHaveBeenCalledWith('Written JSON file: /path/to/file.json');
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'Written JSON file: /path/to/file.json'
+      );
     });
 
     it('should throw error when file write fails', async () => {
       const mockData = { test: 'data' };
-      mockFs.writeFile.mockRejectedValueOnce(new Error('Permission denied'));
-      
-      await expect(fileUtils.writeJsonFile('/path/to/file.json', mockData)).rejects.toThrow(
-        /Failed to write JSON file/
+      mockFs.writeFile.mockImplementation(() =>
+        Promise.reject(new Error('Permission denied'))
       );
+
+      await expect(
+        fileUtils.writeJsonFile('/path/to/file.json', mockData)
+      ).rejects.toThrow(/Failed to write JSON file/);
     });
   });
 
   describe('copyFile', () => {
     it('should copy file successfully', async () => {
-      mockFs.copy.mockResolvedValueOnce();
-      
+      mockFs.copy.mockImplementation(() => Promise.resolve());
+
       await fileUtils.copyFile('/source/path', '/dest/path');
-      
+
       expect(mockFs.copy).toHaveBeenCalledWith('/source/path', '/dest/path');
-      expect(mockLogger.debug).toHaveBeenCalledWith('Copied file from /source/path to /dest/path');
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'Copied file from /source/path to /dest/path'
+      );
     });
 
     it('should throw error when copy fails', async () => {
-      mockFs.copy.mockRejectedValueOnce(new Error('Permission denied'));
-      
-      await expect(fileUtils.copyFile('/source/path', '/dest/path')).rejects.toThrow(
-        /Failed to copy file/
+      mockFs.copy.mockImplementation(() =>
+        Promise.reject(new Error('Permission denied'))
       );
+
+      await expect(
+        fileUtils.copyFile('/source/path', '/dest/path')
+      ).rejects.toThrow(/Failed to copy file/);
     });
   });
 });

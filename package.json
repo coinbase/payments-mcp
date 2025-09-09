@@ -10,7 +10,7 @@
     "build": "tsc",
     "dev": "ts-node src/cli.ts",
     "prepublishOnly": "npm run build",
-    "test": "jest --passWithNoTests",
+    "test": "jest",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"
   },

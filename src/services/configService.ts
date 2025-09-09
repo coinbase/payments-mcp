@@ -114,7 +114,7 @@ export class ConfigService {
         return false;
       }
       
-      for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
+      for (const [_serverName, serverConfig] of Object.entries(config.mcpServers)) {
         if (!serverConfig || typeof serverConfig !== 'object') {
           return false;
         }

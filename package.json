@@ -14,7 +14,13 @@
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"
   },
-  "keywords": ["mcp", "claude", "payments", "coinbase", "installer"],
+  "keywords": [
+    "mcp",
+    "claude",
+    "payments",
+    "coinbase",
+    "installer"
+  ],
   "author": "Coinbase",
   "license": "MIT",
   "dependencies": {

@@ -34,7 +34,7 @@ export class InstallService {
     this.logger.info('Running electron installer...');
     
     try {
-      const paths = PathUtils.getInstallationPaths();
+      const _paths = PathUtils.getInstallationPaths();
       const electronDir = path.join(projectPath, 'node_modules', 'electron');
       const installerScript = path.join(electronDir, 'install.js');
 
@@ -118,12 +118,12 @@ export class InstallService {
         shell: process.platform === 'win32',
       });
 
-      let stdout = '';
+      let _stdout = '';
       let stderr = '';
 
       child.stdout?.on('data', (data) => {
         const output = data.toString();
-        stdout += output;
+        _stdout += output;
         
         process.stdout.write('.');
       });

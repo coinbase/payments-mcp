@@ -1,21 +1,17 @@
 import { ConfigService } from '../../services/configService';
 import { Logger } from '../../utils/logger';
-import { FileUtils } from '../../utils/fileUtils';
 import { ClaudeDesktopConfig } from '../../types';
 
 // Mock dependencies
 jest.mock('../../utils/logger');
-jest.mock('../../utils/fileUtils');
 
 describe('ConfigService', () => {
   let configService: ConfigService;
   let mockLogger: jest.Mocked<Logger>;
-  let mockFileUtils: jest.Mocked<FileUtils>;
 
   beforeEach(() => {
     mockLogger = new Logger() as jest.Mocked<Logger>;
-    mockFileUtils = new FileUtils(mockLogger) as jest.Mocked<FileUtils>;
-    configService = new ConfigService(mockLogger, mockFileUtils);
+    configService = new ConfigService(mockLogger);
   });
 
   describe('validateConfig', () => {
@@ -42,14 +38,14 @@ describe('ConfigService', () => {
     it('should return false for invalid isUsingBuiltInNodeForMcp type', () => {
       const config = {
         mcpServers: {},
-        isUsingBuiltInNodeForMcp: 'invalid'
+        isUsingBuiltInNodeForMcp: 'invalid',
       } as any;
       expect(configService.validateConfig(config)).toBe(false);
     });
 
     it('should return true for valid config with empty mcpServers', () => {
       const config: ClaudeDesktopConfig = {
-        mcpServers: {}
+        mcpServers: {},
       };
       expect(configService.validateConfig(config)).toBe(true);
     });
@@ -57,7 +53,7 @@ describe('ConfigService', () => {
     it('should return true for valid config with isUsingBuiltInNodeForMcp', () => {
       const config: ClaudeDesktopConfig = {
         mcpServers: {},
-        isUsingBuiltInNodeForMcp: true
+        isUsingBuiltInNodeForMcp: true,
       };
       expect(configService.validateConfig(config)).toBe(true);
     });
@@ -66,9 +62,9 @@ describe('ConfigService', () => {
       const config = {
         mcpServers: {
           'test-server': {
-            args: []
-          }
-        }
+            args: [],
+          },
+        },
       } as any;
       expect(configService.validateConfig(config)).toBe(false);
     });
@@ -78,9 +74,9 @@ describe('ConfigService', () => {
         mcpServers: {
           'test-server': {
             command: 123,
-            args: []
-          }
-        }
+            args: [],
+          },
+        },
       } as any;
       expect(configService.validateConfig(config)).toBe(false);
     });
@@ -90,9 +86,9 @@ describe('ConfigService', () => {
         mcpServers: {
           'test-server': {
             command: 'node',
-            args: 'invalid'
-          }
-        }
+            args: 'invalid',
+          },
+        },
       } as any;
       expect(configService.validateConfig(config)).toBe(false);
     });
@@ -103,9 +99,9 @@ describe('ConfigService', () => {
           'test-server': {
             command: 'node',
             args: [],
-            env: 'invalid'
-          }
-        }
+            env: 'invalid',
+          },
+        },
       } as any;
       expect(configService.validateConfig(config)).toBe(false);
     });
@@ -117,11 +113,11 @@ describe('ConfigService', () => {
             command: 'node',
             args: ['./dist/index.js'],
             env: {
-              NODE_ENV: 'production'
-            }
-          }
+              NODE_ENV: 'production',
+            },
+          },
         },
-        isUsingBuiltInNodeForMcp: true
+        isUsingBuiltInNodeForMcp: true,
       };
       expect(configService.validateConfig(config)).toBe(true);
     });
@@ -133,13 +129,17 @@ describe('ConfigService', () => {
         mcpServers: {
           'payments-mcp': {
             command: 'node',
-            args: ['./dist/index.js']
-          }
-        }
+            args: ['./dist/index.js'],
+          },
+        },
       };
-      
-      expect(configService.mergeWithExistingConfig(newConfig, null)).toEqual(newConfig);
-      expect(configService.mergeWithExistingConfig(newConfig, undefined)).toEqual(newConfig);
+
+      expect(configService.mergeWithExistingConfig(newConfig, null)).toEqual(
+        newConfig
+      );
+      expect(
+        configService.mergeWithExistingConfig(newConfig, undefined)
+      ).toEqual(newConfig);
     });
 
     it('should return new config when existing config is not an object', () => {
@@ -147,12 +147,14 @@ describe('ConfigService', () => {
         mcpServers: {
           'payments-mcp': {
             command: 'node',
-            args: ['./dist/index.js']
-          }
-        }
+            args: ['./dist/index.js'],
+          },
+        },
       };
-      
-      expect(configService.mergeWithExistingConfig(newConfig, 'invalid')).toEqual(newConfig);
+
+      expect(
+        configService.mergeWithExistingConfig(newConfig, 'invalid')
+      ).toEqual(newConfig);
     });
 
     it('should merge configs with existing mcpServers', () => {
@@ -160,25 +162,32 @@ describe('ConfigService', () => {
         mcpServers: {
           'payments-mcp': {
             command: 'node',
-            args: ['./dist/index.js']
-          }
-        }
+            args: ['./dist/index.js'],
+          },
+        },
       };
 
       const existingConfig = {
         mcpServers: {
           'other-server': {
             command: 'python',
-            args: ['./script.py']
-          }
+            args: ['./script.py'],
+          },
         },
-        someOtherProperty: 'value'
+        someOtherProperty: 'value',
       };
 
-      const result = configService.mergeWithExistingConfig(newConfig, existingConfig);
-      
-      expect(result.mcpServers['payments-mcp']).toEqual(newConfig.mcpServers['payments-mcp']);
-      expect(result.mcpServers['other-server']).toEqual(existingConfig.mcpServers['other-server']);
+      const result = configService.mergeWithExistingConfig(
+        newConfig,
+        existingConfig
+      );
+
+      expect(result.mcpServers['payments-mcp']).toEqual(
+        newConfig.mcpServers['payments-mcp']
+      );
+      expect(result.mcpServers['other-server']).toEqual(
+        existingConfig.mcpServers['other-server']
+      );
       expect((result as any).someOtherProperty).toBe('value');
     });
   });

@@ -168,10 +168,7 @@ Example configuration:
   "mcpServers": {
     "payments-mcp": {
       "command": "npm",
-      "args": ["-c", "run", "node_modules/.bin/electron bundle.js"],
-      "env": {
-        "WALLET_UI_URL": "https://paymentsmcp.coinbase.com"
-      }
+      "args": ["--silent", "-C", "path/to/installation", "run", "start"],
     }
   }
 }

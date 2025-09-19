@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import { ClaudeDesktopConfig } from '../types';
 import { PathUtils } from '../utils/pathUtils';
 import { Logger } from '../utils/logger';
-import { PAYMENTS_MCP_BASE_URL } from '../constants';
 
 export class ConfigService {
   private logger: Logger;
@@ -18,13 +17,9 @@ export class ConfigService {
       mcpServers: {
         'payments-mcp': {
           command: npmExecutable,
-          args: ['--silent', '-C', installPath, 'run', 'electron'],
-          env: {
-            WALLET_UI_URL: PAYMENTS_MCP_BASE_URL,
-          },
+          args: ['--silent', '-C', installPath, 'run', 'start'],
         },
       },
-      isUsingBuiltInNodeForMcp: false,
     };
   }
 

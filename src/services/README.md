@@ -114,11 +114,7 @@ getClaudeConfigPath(): string | null                           // Platform paths
   "mcpServers": {
     "payments-mcp": {
       "command": "npm",
-      "args": ["start"],
-      "cwd": "/path/to/installation",
-      "env": {
-        "WALLET_UI_URL": "https://paymentsmcp.coinbase.com"
-      }
+      "args": ["--silent", "-C", "path/to/installation", "run", "start"],
     }
   }
 }

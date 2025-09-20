@@ -83,9 +83,7 @@ jobs:
           npm version ${{ steps.version.outputs.version }} --no-git-tag-version
 
       - name: Verify package contents
-        run: |
-          echo "Package contents:"
-          npm pack --dry-run
+        run: npm pack --dry-run
 
       - name: Publish to NPM
         env:

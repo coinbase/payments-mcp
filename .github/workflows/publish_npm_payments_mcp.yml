@@ -45,6 +45,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
 
+    environment: production
     steps:
       - name: Checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
@@ -88,9 +89,9 @@ jobs:
 
       - name: Publish to NPM
         env:
-          NODE_AUTH_TOKEN: ${{SECRETS.PUBLISHING_SECRET}}
-          run: |
-            npm publish --ignore-scripts --provenance --access public
+          NODE_AUTH_TOKEN: ${{secrets.PUBLISHING_SECRET}}
+        run: |
+          npm publish --ignore-scripts --provenance --access public
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836 # v2.3.3

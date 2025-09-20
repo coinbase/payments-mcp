@@ -9,7 +9,7 @@ on:
         type: string
 
 permissions:
-  id-token: write  # Required for OIDC trusted publishing
+  id-token: write # Required for OIDC trusted publishing
   contents: read
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         node-version: [22]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
@@ -44,7 +44,7 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
@@ -90,24 +90,19 @@ jobs:
         run: npm publish --access public
 
       - name: Create GitHub Release
-<<<<<<< HEAD
         uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836 # v2.3.3
-=======
-        uses: softprops/action-gh-release@v2
->>>>>>> eebd613 (Update workflows)
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: Release ${{ steps.version.outputs.version }}
           body: |
             ## Changes
-            
+
             See the [changelog](./CHANGELOG.md) for details.
-            
+
             ## Installation
-            
+
             ```bash
             npx @coinbase/payments-mcp@${{ steps.version.outputs.version }}
             ```
           draft: false
           prerelease: false
-

@@ -87,10 +87,10 @@ jobs:
           npm pack --dry-run
 
       - name: Publish to NPM
-      env:
-        NODE_AUTH_TOKEN: ${{SECRETS.PUBLISHING_SECRET}}
-        run: |
-          npm publish --ignore-scripts --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{SECRETS.PUBLISHING_SECRET}}
+          run: |
+            npm publish --ignore-scripts --provenance --access public
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836 # v2.3.3

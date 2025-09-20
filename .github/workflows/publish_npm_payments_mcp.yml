@@ -90,7 +90,11 @@ jobs:
         run: npm publish --access public
 
       - name: Create GitHub Release
+<<<<<<< HEAD
         uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836 # v2.3.3
+=======
+        uses: softprops/action-gh-release@v2
+>>>>>>> eebd613 (Update workflows)
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: Release ${{ steps.version.outputs.version }}

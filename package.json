@@ -4,7 +4,7 @@
   "description": "NPX installer for payments-mcp Claude Desktop integration",
   "main": "dist/cli.js",
   "bin": {
-    "payments-mcp": "./bin/cli.js"
+    "payments-mcp": "bin/cli.js"
   },
   "scripts": {
     "build": "tsc",

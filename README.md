@@ -198,11 +198,6 @@ Example configuration:
 
 **Network Issues**
 - Check your firewall and proxy settings
-- Ensure access to `payments-mcp-dev.cbhq.net`
-
-**SSL Certificate Issues**
-- For development servers with self-signed certificates, set: `PAYMENTS_MCP_ALLOW_INSECURE_TLS=true`
-- Example: `PAYMENTS_MCP_ALLOW_INSECURE_TLS=true npx payments-mcp`
 
 ### Debug Mode
 

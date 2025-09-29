@@ -4,7 +4,6 @@ import fs from 'fs-extra';
 import { DownloadProgress } from '../types';
 import { HttpUtils } from '../utils/httpUtils';
 import { FileUtils } from '../utils/fileUtils';
-// import { PathUtils } from '../utils/pathUtils';
 import { Logger } from '../utils/logger';
 import { PAYMENTS_MCP_BASE_URL } from '../constants';
 

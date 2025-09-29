@@ -18,12 +18,6 @@ Utility Layer
 
 **Purpose**: Provides consistent, colored terminal output with debug support.
 
-**Features**:
-- **Colored Output**: Uses chalk for status-specific colors (success=green, error=red, etc.)
-- **Verbose Mode**: Debug messages only shown when verbose flag is enabled
-- **Progress Indicators**: Support for progress tracking with visual feedback
-- **Consistent Format**: Standardized message formatting with icons
-
 **Methods**:
 ```typescript
 info(message: string): void                    // Blue info messages with ℹ icon

@@ -4,36 +4,32 @@ A TypeScript-based npx installer for the payments-mcp project, providing seamles
 
 ## Quick Start
 
-Install and configure payments-mcp with a single command:
+### 1) Install payments-mcp:
 
 ```bash
 npx payments-mcp
 ```
 
-## Features
+### 2) After successful installation, the installer will display configuration instructions. You need to:
 
-- ✅ **One-Command Installation**: Complete setup with `npx payments-mcp`
-- 🔄 **Automatic Updates**: Checks for and installs the latest version
-- 🌐 **Cross-Platform**: Works on macOS, Windows, and Linux
-- 🛡️ **Safe & Secure**: Downloads over HTTPS with integrity validation
-- 📦 **Self-Contained**: Manages dependencies and configuration automatically
-- 🔧 **Claude Desktop Integration**: Generates ready-to-use configuration
+1. Open Claude Desktop application
+2. Go to Settings → Developer → MCP Servers
+3. Add the provided configuration
+4. Restart Claude Desktop
 
-## Requirements
-
-- Node.js 22.0.0 or higher
-- npm (included with Node.js)
-- Internet connection for downloading packages
+Example configuration:
+```json
+{
+  "mcpServers": {
+    "payments-mcp": {
+      "command": "npm",
+      "args": ["--silent", "-C", "~/.payments-mcp", "run", "start"],
+    }
+  }
+}
+```
 
 ## Usage
-
-### Installation
-
-Install the latest version of payments-mcp:
-
-```bash
-npx payments-mcp
-```
 
 ### Commands
 
@@ -64,6 +60,12 @@ npx payments-mcp status --verbose
 - `--force, -f`: Force reinstallation even if already up to date
 - `--help, -h`: Show help information
 
+### File Locations
+
+- **Installation Directory**: `~/.payments-mcp/`
+- **Configuration Files**: Generated during installation
+- **Logs**: Displayed in terminal (use `--verbose` for detailed logs)
+
 ## How It Works
 
 The installer orchestrates a multi-step process using its layered architecture:
@@ -71,8 +73,8 @@ The installer orchestrates a multi-step process using its layered architecture:
 ### Installation Workflow
 
 ```
-CLI Command → Orchestrator → Services → Utilities
-     ↓             ↓           ↓          ↓
+CLI Command → Orchestrator  →  Services →  Utilities
+     ↓             ↓              ↓           ↓
 [parse args] → [coordinate] → [execute] → [foundation]
 ```
 
@@ -110,75 +112,6 @@ CLI Command → Orchestrator → Services → Utilities
    - Generate Claude Desktop MCP server config
    - Display setup instructions to user
    - Provide troubleshooting information
-
-### Service Coordination Example
-
-```typescript
-// Orchestrator delegates to services
-async install(options: InstallOptions): Promise<void> {
-  // 1. Check prerequisites  
-  await this.performPreflightChecks();
-  
-  // 2. Version comparison
-  const versionInfo = await this.versionService.getVersionInfo();
-  
-  // 3. Download if needed
-  if (versionInfo.needsUpdate) {
-    await this.downloadService.downloadAndExtract(installPath);
-    
-    // 4. Install dependencies
-    await this.installService.runNpmInstall(installPath);
-    
-    // 5. Generate configuration
-    const config = this.configService.generateClaudeConfig(installPath);
-    this.configService.displayConfigInstructions(config);
-  }
-}
-```
-
-### Cross-Cutting Concerns
-
-**Error Handling**:
-- Utilities throw descriptive errors
-- Services catch and add context
-- Orchestrator handles cleanup and user feedback
-
-**Logging**:
-- All components receive shared Logger instance
-- Consistent output formatting across layers
-- Debug information available in verbose mode
-
-**Security**:
-- Path sanitization in utilities
-- Safe file operations in services  
-- Input validation throughout the stack
-
-## Claude Desktop Setup
-
-After successful installation, the installer will display configuration instructions. You need to:
-
-1. Open Claude Desktop application
-2. Go to Settings → Developer → MCP Servers
-3. Add the provided configuration
-4. Restart Claude Desktop
-
-Example configuration:
-```json
-{
-  "mcpServers": {
-    "payments-mcp": {
-      "command": "npm",
-      "args": ["--silent", "-C", "path/to/installation", "run", "start"],
-    }
-  }
-}
-```
-
-## File Locations
-
-- **Installation Directory**: `~/.payments-mcp/`
-- **Configuration Files**: Generated during installation
-- **Logs**: Displayed in terminal (use `--verbose` for detailed logs)
 
 ## Troubleshooting
 
@@ -239,173 +172,24 @@ npm run format
 npm run lint
 ```
 
-## Architecture Overview
+## Contributing
 
-The installer follows a layered architecture with clear separation of concerns:
+We welcome contributions to payments-mcp! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                     CLI Layer                           │
-│  ┌───────────────────────────────────────────────────┐ │
-│  │  cli.ts - Commander.js interface                  │ │
-│  │  Commands: install, status, uninstall            │ │
-│  └───────────────────────────────────────────────────┘ │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────┐
-│                 Orchestrator                            │
-│  ┌───────────────────────────────────────────────────┐ │
-│  │  installer.ts - PaymentsMCPInstaller             │ │
-│  │  Coordinates installation workflow               │ │
-│  └───────────────────────────────────────────────────┘ │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────┐
-│                 Services Layer                          │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐│
-│  │Version      │ │Download     │ │Install & Config     ││
-│  │Service      │ │Service      │ │Services             ││
-│  └─────────────┘ └─────────────┘ └─────────────────────┘│
-└─────────────────────┬───────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────┐
-│                 Utilities Layer                         │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐│
-│  │Logger       │ │HttpUtils    │ │FileUtils & PathUtils││
-│  │             │ │             │ │                     ││
-│  └─────────────┘ └─────────────┘ └─────────────────────┘│
-└─────────────────────────────────────────────────────────┘
-```
-
-## Component Breakdown
-
-### CLI Layer (`cli.ts`)
-
-The command-line interface built with Commander.js that provides:
-
-- **Command Parsing**: Handles `install`, `status`, and `uninstall` commands
-- **Option Processing**: Manages `--verbose`, `--force` flags
-- **Help System**: Auto-generated help text with examples
-- **Default Behavior**: No command defaults to `install`
-
-**Key Features**:
-```bash
-npx install-payments-mcp install --force --verbose
-npx install-payments-mcp status
-npx install-payments-mcp uninstall
-```
-
-### Orchestrator (`installer.ts`)
-
-The `PaymentsMCPInstaller` class coordinates the entire installation workflow:
-
-**Installation Flow**:
-1. **Pre-flight Checks** - Verify Node.js, npm, and network availability
-2. **Version Comparison** - Check if installation/update is needed
-3. **Download Phase** - Download and extract the payments-mcp package
-4. **Installation Phase** - Run npm install and electron setup
-5. **Configuration** - Generate Claude Desktop MCP server config
-6. **Cleanup** - Handle errors and cleanup temporary files
-
-**Core Methods**:
-```typescript
-async install(options: InstallOptions): Promise<void>
-async getStatus(): Promise<void>  
-async uninstall(): Promise<void>
-```
-
-The orchestrator delegates specific tasks to services while managing the overall workflow and error handling.
-
-### Services Layer
-
-Located in `src/services/` - each service handles a specific domain:
-
-#### VersionService
-- Compares local vs remote package versions using semantic versioning
-- Fetches version info from `https://paymentsmcp.coinbase.com/api/version`
-- Determines if updates are needed
-
-#### DownloadService  
-- Downloads packages from `https://paymentsmcp.coinbase.com/payments-mcp.zip`
-- Securely extracts ZIP files with path sanitization
-- Provides download progress feedback
-
-#### InstallService
-- Executes `npm install` in the extracted package directory
-- Runs electron installer if available
-- Verifies successful installation
-
-#### ConfigService
-- Generates Claude Desktop MCP server configuration
-- Provides cross-platform config file paths
-- Displays setup instructions to users
-
-**See [`src/services/README.md`](src/services/README.md) for detailed service documentation.**
-
-### Utilities Layer
-
-Located in `src/utils/` - provides foundational functionality:
-
-#### Logger
-- Colored terminal output using chalk
-- Debug mode support with verbose flag
-- Progress indicators for long operations
-
-#### HttpUtils
-- HTTP client with automatic retry logic
-- Download progress tracking
-- Comprehensive error handling
-
-#### FileUtils
-- Safe file system operations
-- JSON file handling
-- Temporary file management with cleanup
-
-#### PathUtils
-- Cross-platform path utilities
-- Path sanitization for security
-- Platform-specific executable detection
-
-**See [`src/utils/README.md`](src/utils/README.md) for detailed utility documentation.**
-
-### Project Structure
-
-```
-src/
-├── cli.ts                    # CLI entry point with Commander.js
-├── installer.ts              # Main orchestrator class
-├── types/
-│   └── index.ts             # TypeScript interfaces and types
-├── services/                # Business logic layer
-│   ├── README.md           # Service layer documentation
-│   ├── versionService.ts   # Version checking and comparison
-│   ├── downloadService.ts  # Package download and extraction
-│   ├── installService.ts   # npm/electron installation
-│   ├── configService.ts    # Claude Desktop configuration
-│   └── __tests__/          # Service unit tests
-└── utils/                  # Utility layer
-    ├── README.md          # Utility layer documentation  
-    ├── logger.ts          # Colored terminal output
-    ├── httpUtils.ts       # HTTP client with retry logic
-    ├── fileUtils.ts       # Safe file operations
-    ├── pathUtils.ts       # Cross-platform path utilities
-    └── __tests__/         # Utility unit tests
-```
+- Development setup and workflow
+- Code standards and guidelines  
+- Pull request process
+- Setting up signed commits (required)
 
 ## Security
 
-- Downloads are performed over HTTPS only
-- File paths are sanitized to prevent directory traversal
-- ZIP extraction validates file paths for safety
-- Temporary files are cleaned up after installation
+The Coinbase team takes security seriously. Please do not file a public ticket discussing a potential vulnerability. Please report your findings through our [HackerOne](https://hackerone.com/coinbase) program.
+
+For more information, see our [Security Policy](SECURITY.md).
 
 ## License
 
-MIT License - see LICENSE file for details.
-
-## Contributing
-
-Contributions are welcome! Please read the contributing guidelines and submit pull requests to the main repository.
+Licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for details.
 
 ---
 

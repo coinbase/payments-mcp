@@ -1,16 +1,26 @@
 # Services Layer
 
-The services layer contains the core business logic for the payments-mcp installer. Each service handles a specific domain of functionality with clear separation of concerns.
+The services layer contains the core business logic for the payments-mcp installer. Each service handles a specific domain with clear separation of concerns.
 
-## Architecture Overview
+## Architecture
+
+The installer follows a layered architecture:
 
 ```
-PaymentsMCPInstaller (Orchestrator)
-├── VersionService     - Version management and comparison
-├── DownloadService    - Package download and extraction  
+CLI Layer (cli.ts)
+    ↓
+Orchestrator (installer.ts) - PaymentsMCPInstaller
+    ↓
+Services Layer
+├── VersionService     - Version comparison using semver
+├── DownloadService    - Package download and ZIP extraction
 ├── InstallService     - npm/electron installation
 └── ConfigService      - Claude Desktop configuration
+    ↓
+Utilities Layer (logger, http, file, path utilities)
 ```
+
+The orchestrator coordinates the workflow while services handle specific domains. All services are stateless and composable.
 
 ## Service Descriptions
 
@@ -20,7 +30,7 @@ PaymentsMCPInstaller (Orchestrator)
 
 **Key Responsibilities**:
 - Fetches local version from installed package.json
-- Retrieves remote version from `https://payments-mcp.coinbase.com/api/version`
+- Retrieves remote version from API endpoint
 - Compares versions using semver to determine if updates are needed
 - Validates version format and provides formatted output
 
@@ -122,6 +132,24 @@ getClaudeConfigPath(): string | null                           // Platform paths
 
 **Dependencies**: PathUtils, chalk for colored output
 
+## Project Structure
+
+```
+src/
+├── cli.ts                    # CLI entry point with Commander.js
+├── installer.ts              # Main orchestrator class
+├── services/                 # Business logic layer
+│   ├── versionService.ts     # Version checking and comparison
+│   ├── downloadService.ts    # Package download and extraction
+│   ├── installService.ts     # npm/electron installation
+│   └── configService.ts      # Claude Desktop configuration
+└── utils/                    # Utility layer
+    ├── logger.ts             # Colored terminal output
+    ├── httpUtils.ts          # HTTP client with retry logic
+    ├── fileUtils.ts          # Safe file operations
+    └── pathUtils.ts          # Cross-platform path utilities
+```
+
 ## Service Communication Pattern
 
 Services are designed to be **stateless** and **composable**:
@@ -147,26 +175,6 @@ if (versionInfo.needsUpdate) {
 }
 ```
 
-## Testing
+## Testing & Error Handling
 
-Each service has corresponding unit tests in the `__tests__/` directory:
-
-- `versionService.test.ts` - Version comparison and API interaction
-- `configService.test.ts` - Configuration generation and validation
-
-Tests focus on:
-- Business logic validation
-- Error handling scenarios  
-- Edge cases and boundary conditions
-- Mock external dependencies (HTTP, file system)
-
-## Error Handling Strategy
-
-Services implement a **fail-fast** approach:
-
-1. **Input Validation**: Early validation of parameters with descriptive errors
-2. **Resource Safety**: Automatic cleanup on failure paths
-3. **Error Context**: Rich error messages with actionable information
-4. **Graceful Degradation**: Warnings instead of failures where appropriate
-
-This architecture ensures that each service can be developed, tested, and maintained independently while providing clear interfaces for the orchestrator layer.
+Services are unit tested in `__tests__/` and follow a **fail-fast** approach with early validation, automatic cleanup, and descriptive error messages. Each service can be developed and tested independently while providing clear interfaces for the orchestrator.

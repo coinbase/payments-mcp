@@ -22,6 +22,14 @@
     "coinbase",
     "installer"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/coinbase/payments-mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/coinbase/payments-mcp/issues"
+  },
+  "homepage": "https://github.com/coinbase/payments-mcp#readme",
   "author": "Coinbase",
   "license": "Apache-2.0",
   "dependencies": {

@@ -96,6 +96,4 @@ program
     console.log('The default action (no command) is equivalent to "install".');
   });
 
-if (require.main === module) {
-  program.parse();
-}
+program.parse();

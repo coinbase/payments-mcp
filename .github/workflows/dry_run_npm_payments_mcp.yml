@@ -1,0 +1,113 @@
+name: Dry Run NPM Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to test (e.g., v1.0.0)'
+        required: true
+        type: string
+  pull_request:
+    branches: [main]
+
+permissions:
+  id-token: write # Required for OIDC trusted publishing
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build project
+        run: npm run build
+
+  dry-run:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Update npm to latest
+        run: npm install -g npm@latest
+
+      - name: Configure npm for trusted publishing
+        run: |
+          npm config delete always-auth 2>/dev/null || true
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Extract version from input
+        id: version
+        run: |
+          VERSION=${{ github.event.inputs.version }}
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Testing version: $VERSION"
+
+      - name: Update package.json version
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+
+      - name: Verify package contents
+        run: |
+          echo "Package contents:"
+          npm pack --dry-run
+
+      - name: Dry Run NPM Publish
+        run: |
+          echo "🧪 Running dry run publish..."
+          npm publish --dry-run --access public
+          echo "✅ Dry run completed successfully!"
+          echo ""
+          echo "📦 Package would be published as: @coinbase/payments-mcp@${{ steps.version.outputs.version }}"
+          echo "🎯 Install command would be: npx @coinbase/payments-mcp@${{ steps.version.outputs.version }}"
+
+      - name: Generate publish summary
+        run: |
+          echo "## 🧪 Dry Run Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All checks passed! Package is ready for publishing." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Package:** \`@coinbase/payments-mcp@${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Install command:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "npx @coinbase/payments-mcp@${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To publish for real, run the **Deploy to NPM** workflow." >> $GITHUB_STEP_SUMMARY

@@ -7,7 +7,7 @@ A TypeScript-based npx installer for the payments-mcp project, providing seamles
 ### 1) Install payments-mcp:
 
 ```bash
-npx payments-mcp
+npx @coinbase/payments-mcp
 ```
 
 ### 2) After successful installation, the installer will display configuration instructions. You need to:
@@ -35,23 +35,23 @@ Example configuration:
 
 ```bash
 # Default installation (same as 'install')
-npx payments-mcp
+npx @coinbase/payments-mcp
 
 # Explicit install command
-npx payments-mcp install
+npx @coinbase/payments-mcp install
 
 # Force reinstallation (even if up to date)
-npx payments-mcp install --force
+npx @coinbase/payments-mcp install --force
 
 # Check installation status
-npx payments-mcp status
+npx @coinbase/payments-mcp status
 
 # Uninstall payments-mcp
-npx payments-mcp uninstall
+npx @coinbase/payments-mcp uninstall
 
 # Enable verbose logging for any command
-npx payments-mcp install --verbose
-npx payments-mcp status --verbose
+npx @coinbase/payments-mcp install --verbose
+npx @coinbase/payments-mcp status --verbose
 ```
 
 ### Options
@@ -137,14 +137,14 @@ CLI Command → Orchestrator  →  Services →  Utilities
 For detailed troubleshooting information, run with verbose logging:
 
 ```bash
-npx payments-mcp install --verbose
+npx @coinbase/payments-mcp install --verbose
 ```
 
 ### Getting Help
 
 1. Check the status of your installation:
    ```bash
-   npx payments-mcp status
+   npx @coinbase/payments-mcp status
    ```
 
 2. View detailed logs with `--verbose` flag

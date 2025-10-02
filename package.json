@@ -1,6 +1,6 @@
 {
   "name": "@coinbase/payments-mcp",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "NPX installer for payments-mcp Claude Desktop integration",
   "main": "dist/cli.js",
   "bin": {

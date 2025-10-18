@@ -1,6 +1,6 @@
 # @coinbase/payments-mcp
 
-A TypeScript-based npx installer for the payments-mcp project, providing seamless Claude Desktop integration for cryptocurrency payments functionality.
+A TypeScript-based npx installer for the payments-mcp project, providing seamless integration with stdio-compatible MCP clients for cryptocurrency payments functionality.
 
 ## Quick Start
 
@@ -10,20 +10,32 @@ A TypeScript-based npx installer for the payments-mcp project, providing seamles
 npx @coinbase/payments-mcp
 ```
 
-### 2) After successful installation, the installer will display configuration instructions. You need to:
+### 2) Select your MCP client:
 
-1. Open Claude Desktop application
-2. Go to Settings → Developer → MCP Servers
-3. Add the provided configuration
-4. Restart Claude Desktop
+During installation, you'll be prompted to choose which MCP client you're configuring:
+- **Claude Desktop** - Claude Desktop application
+- **Claude Code** - Claude Code CLI
+- **Codex CLI** - OpenAI Codex CLI
+- **Google Gemini CLI** - Google Gemini CLI
+- **Other** - Other MCP-compatible tools
 
-Example configuration:
+You can also specify the client directly:
+
+```bash
+npx @coinbase/payments-mcp --client <client>
+```
+
+### 3) Follow the installation instructions:
+
+After installation, detailed configuration instructions specific to your chosen MCP client will be displayed.
+
+#### Example Configuration:
 ```json
 {
   "mcpServers": {
     "payments-mcp": {
       "command": "npm",
-      "args": ["--silent", "-C", "~/.payments-mcp", "run", "start"],
+      "args": ["--silent", "-C", "~/.payments-mcp", "run", "start"]
     }
   }
 }
@@ -51,14 +63,24 @@ npx @coinbase/payments-mcp uninstall
 
 # Enable verbose logging for any command
 npx @coinbase/payments-mcp install --verbose
-npx @coinbase/payments-mcp status --verbose
 ```
 
 ### Options
 
+- `--client, -c <client>`: Specify MCP client to configure (claude, claude-code, codex, gemini, other)
 - `--verbose, -v`: Enable detailed logging output
 - `--force, -f`: Force reinstallation even if already up to date
 - `--help, -h`: Show help information
+
+### Supported MCP Clients
+
+| Client | Value | Description |
+|------|-------|-------------|
+| Claude Desktop | `claude` | Claude Desktop application |
+| Claude Code | `claude-code` | Claude Code CLI tool |
+| Codex CLI | `codex` | OpenAI Codex CLI tool |
+| Gemini CLI | `gemini` | Google Gemini CLI tool |
+| Other | `other` | Other stdio-compatible MCP clients |
 
 ### File Locations
 
@@ -108,10 +130,14 @@ CLI Command → Orchestrator  →  Services →  Utilities
    - Run electron installer if available
    - Verify installation success
 
-6. **Configuration** (Orchestrator → ConfigService → PathUtils)
-   - Generate Claude Desktop MCP server config
-   - Display setup instructions to user
-   - Provide troubleshooting information
+6. **MCP Client Selection** (Orchestrator → Interactive Prompt)
+   - Prompt user to select their MCP client (or use --client flag)
+   - Support for Claude Desktop, Claude Code, Codex CLI, Gemini CLI, and other clients
+   
+7. **Configuration** (Orchestrator → ConfigService → PathUtils)
+   - Generate MCP server config for selected MCP client
+   - Display client-specific setup instructions
+   - Provide config file locations and troubleshooting information
 
 ## Troubleshooting
 
@@ -151,36 +177,6 @@ npx @coinbase/payments-mcp install --verbose
 
 3. For additional support, visit: [GitHub Issues](https://github.com/coinbase/payments-mcp/issues)
 
-## Development
-
-### Building from Source
-
-```bash
-# Install dependencies
-npm install
-
-# Build TypeScript
-npm run build
-
-# Test locally
-npm run dev
-
-# Format code
-npm run format
-
-# Lint code
-npm run lint
-```
-
-## Contributing
-
-We welcome contributions to payments-mcp! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
-
-- Development setup and workflow
-- Code standards and guidelines  
-- Pull request process
-- Setting up signed commits (required)
-
 ## Security
 
 The Coinbase team takes security seriously. Please do not file a public ticket discussing a potential vulnerability. Please report your findings through our [HackerOne](https://hackerone.com/coinbase) program.
@@ -193,4 +189,4 @@ Licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file 
 
 ---
 
-**Note**: This installer is designed specifically for the payments-mcp project and Claude Desktop integration. For other MCP servers, please refer to their respective installation instructions.
+**Note**: This installer is designed for the payments-mcp project and supports multiple MCP clients. For other MCP servers, please refer to their respective installation instructions.

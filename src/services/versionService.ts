@@ -91,10 +91,41 @@ export class VersionService {
 
   async getVersionInfo(): Promise<VersionInfo> {
     try {
-      const [localVersion, remoteVersion] = await Promise.all([
-        this.getLocalVersion(),
-        this.getRemoteVersion(), 
-      ]);
+      const localVersion = await this.getLocalVersion();
+
+      // Try to get remote version, but don't fail if unavailable
+      let remoteVersion: string;
+      try {
+        remoteVersion = await this.getRemoteVersion();
+      } catch (error) {
+        this.logger.warn('Unable to fetch remote version information');
+        this.logger.debug(
+          `Remote version fetch error: ${(error as Error).message}`
+        );
+
+        // If no local version exists, assume fresh install with a default version
+        if (!localVersion) {
+          this.logger.info(
+            'Proceeding with installation using latest available version'
+          );
+          return {
+            local: null,
+            remote: 'latest',
+            needsUpdate: true,
+          };
+        }
+
+        // If local version exists, we can't determine if update is needed
+        // Return current local version as remote and mark as up-to-date
+        this.logger.info(
+          'Cannot check for updates, assuming current version is up-to-date'
+        );
+        return {
+          local: localVersion,
+          remote: localVersion,
+          needsUpdate: false,
+        };
+      }
 
       const needsUpdate = await this.compareVersions(localVersion, remoteVersion);
 

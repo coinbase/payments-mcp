@@ -1,6 +1,6 @@
 {
   "name": "@coinbase/payments-mcp",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "NPX installer for payments-mcp Claude Desktop integration",
   "main": "dist/cli.js",
   "bin": {
@@ -38,11 +38,13 @@
     "cli-progress": "^3.12.0",
     "commander": "^11.1.0",
     "fs-extra": "^11.1.1",
+    "inquirer": "^8.2.5",
     "semver": "^7.5.4",
     "yauzl": "^2.10.0"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
+    "@types/inquirer": "^8.2.5",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.10.0",
     "@types/semver": "^7.5.6",
@@ -63,5 +65,6 @@
   ],
   "engines": {
     "node": ">=22.0.0"
-  }
+  },
+  "packageManager": "pnpm@10.15.0+sha512.486ebc259d3e999a4e8691ce03b5cac4a71cbeca39372a9b762cb500cfdf0873e2cb16abe3d951b1ee2cf012503f027b98b6584e4df22524e0c7450d9ec7aa7b"
 }

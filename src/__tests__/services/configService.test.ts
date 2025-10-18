@@ -1,6 +1,6 @@
 import { ConfigService } from '../../services/configService';
 import { Logger } from '../../utils/logger';
-import { ClaudeDesktopConfig } from '../../types';
+import { MCPServerConfig } from '../../types';
 
 // Mock dependencies
 jest.mock('../../utils/logger');
@@ -26,7 +26,7 @@ describe('ConfigService', () => {
     });
 
     it('should return false for config without mcpServers', () => {
-      const config = {} as ClaudeDesktopConfig;
+      const config = {} as MCPServerConfig;
       expect(configService.validateConfig(config)).toBe(false);
     });
 
@@ -35,25 +35,9 @@ describe('ConfigService', () => {
       expect(configService.validateConfig(config)).toBe(false);
     });
 
-    it('should return false for invalid isUsingBuiltInNodeForMcp type', () => {
-      const config = {
-        mcpServers: {},
-        isUsingBuiltInNodeForMcp: 'invalid',
-      } as any;
-      expect(configService.validateConfig(config)).toBe(false);
-    });
-
     it('should return true for valid config with empty mcpServers', () => {
-      const config: ClaudeDesktopConfig = {
+      const config: MCPServerConfig = {
         mcpServers: {},
-      };
-      expect(configService.validateConfig(config)).toBe(true);
-    });
-
-    it('should return true for valid config with isUsingBuiltInNodeForMcp', () => {
-      const config: ClaudeDesktopConfig = {
-        mcpServers: {},
-        isUsingBuiltInNodeForMcp: true,
       };
       expect(configService.validateConfig(config)).toBe(true);
     });
@@ -107,7 +91,7 @@ describe('ConfigService', () => {
     });
 
     it('should return true for valid complete config', () => {
-      const config: ClaudeDesktopConfig = {
+      const config: MCPServerConfig = {
         mcpServers: {
           'payments-mcp': {
             command: 'node',
@@ -117,78 +101,8 @@ describe('ConfigService', () => {
             },
           },
         },
-        isUsingBuiltInNodeForMcp: true,
       };
       expect(configService.validateConfig(config)).toBe(true);
-    });
-  });
-
-  describe('mergeWithExistingConfig', () => {
-    it('should return new config when existing config is null/undefined', () => {
-      const newConfig: ClaudeDesktopConfig = {
-        mcpServers: {
-          'payments-mcp': {
-            command: 'node',
-            args: ['./dist/index.js'],
-          },
-        },
-      };
-
-      expect(configService.mergeWithExistingConfig(newConfig, null)).toEqual(
-        newConfig
-      );
-      expect(
-        configService.mergeWithExistingConfig(newConfig, undefined)
-      ).toEqual(newConfig);
-    });
-
-    it('should return new config when existing config is not an object', () => {
-      const newConfig: ClaudeDesktopConfig = {
-        mcpServers: {
-          'payments-mcp': {
-            command: 'node',
-            args: ['./dist/index.js'],
-          },
-        },
-      };
-
-      expect(
-        configService.mergeWithExistingConfig(newConfig, 'invalid')
-      ).toEqual(newConfig);
-    });
-
-    it('should merge configs with existing mcpServers', () => {
-      const newConfig: ClaudeDesktopConfig = {
-        mcpServers: {
-          'payments-mcp': {
-            command: 'node',
-            args: ['./dist/index.js'],
-          },
-        },
-      };
-
-      const existingConfig = {
-        mcpServers: {
-          'other-server': {
-            command: 'python',
-            args: ['./script.py'],
-          },
-        },
-        someOtherProperty: 'value',
-      };
-
-      const result = configService.mergeWithExistingConfig(
-        newConfig,
-        existingConfig
-      );
-
-      expect(result.mcpServers['payments-mcp']).toEqual(
-        newConfig.mcpServers['payments-mcp']
-      );
-      expect(result.mcpServers['other-server']).toEqual(
-        existingConfig.mcpServers['other-server']
-      );
-      expect((result as any).someOtherProperty).toBe('value');
     });
   });
 });

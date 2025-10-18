@@ -58,7 +58,6 @@ logger.success('Installation completed!');
 get<T>(url: string, options?: HttpRetryOptions): Promise<AxiosResponse<T>>
 downloadFile(url: string, filePath: string, onProgress?: ProgressCallback): Promise<void>
 head(url: string, options?: HttpRetryOptions): Promise<AxiosResponse>
-isNetworkError(error: any): boolean
 getErrorMessage(error: any): string
 ```
 
@@ -94,22 +93,13 @@ interface HttpRetryOptions {
 // Existence and metadata
 exists(filePath: string): Promise<boolean>
 getFileStats(filePath: string): Promise<fs.Stats>
-isDirectory(filePath: string): Promise<boolean>
-isFile(filePath: string): Promise<boolean>
 
 // Directory operations  
 ensureDir(dirPath: string): Promise<void>
 removeDir(dirPath: string): Promise<void>
-listFiles(dirPath: string): Promise<string[]>
-
-// File I/O
-readFile(filePath: string): Promise<string>
-writeFile(filePath: string, content: string): Promise<void>
-copyFile(sourcePath: string, destPath: string): Promise<void>
 
 // JSON operations
 readJsonFile<T>(filePath: string): Promise<T>
-writeJsonFile(filePath: string, data: any): Promise<void>
 
 // Temporary file management
 getTempFilePath(extension?: string): Promise<string>
@@ -125,11 +115,11 @@ if (await fileUtils.exists(packageJsonPath)) {
 
 // Safe directory creation
 await fileUtils.ensureDir(targetDirectory);
-await fileUtils.writeFile(filePath, content);
 
 // Cleanup on failure
+const tempFile = await fileUtils.getTempFilePath('.zip');
 try {
-  await fileUtils.writeFile(tempFile, data);
+  // Use temp file for operations
 } finally {
   await fileUtils.cleanupTemp(tempFile);
 }
@@ -139,35 +129,22 @@ try {
 
 ### PathUtils (`pathUtils.ts`)
 
-**Purpose**: Cross-platform path utilities with security-focused sanitization.
+**Purpose**: Cross-platform path utilities for installation paths and executables.
 
-**Security Features**:
-- **Path Sanitization**: Prevents directory traversal attacks
-- **Absolute Path Enforcement**: Ensures paths are properly resolved
+**Key Features**:
 - **Platform Abstraction**: Handles Windows vs Unix path differences
 - **Executable Detection**: Locates Node.js and npm executables correctly
+- **Standard Installation Paths**: Provides consistent installation directory structure
 
-**Path Safety Methods**:
+**Methods**:
 ```typescript
-sanitizePath(inputPath: string): string           // Prevents ../ attacks
-ensureAbsolute(inputPath: string, basePath?: string): string
+// Installation paths
 getInstallationPaths(): InstallationPaths        // Standard install locations
-```
+getTempDir(): string                              // Platform temp directory
 
-**Platform-Specific Utilities**:
-```typescript
+// Platform-specific executables
 getNodeExecutable(): string     // Cross-platform Node.js path
 getNpmExecutable(): string      // Handles npm.cmd on Windows
-getTempDir(): string            // Platform temp directory
-```
-
-**Path Manipulation**:
-```typescript
-joinPaths(...paths: string[]): string
-getBasename(filePath: string): string
-getDirname(filePath: string): string  
-getExtension(filePath: string): string
-replaceExtension(filePath: string, newExt: string): string
 ```
 
 **Installation Paths Structure**:

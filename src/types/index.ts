@@ -1,6 +1,7 @@
 export interface InstallOptions {
   verbose?: boolean;
   force?: boolean;
+  mcpClient?: MCPClient;
 }
 
 export interface VersionInfo {
@@ -15,16 +16,14 @@ export interface DownloadProgress {
   percent: number;
 }
 
-export interface ClaudeDesktopConfig {
+export interface MCPServerConfig {
   mcpServers: {
     [key: string]: {
       command: string;
-      args: string[];
-      cwd?: string;
+      args?: string[];
       env?: Record<string, string>;
     };
   };
-  isUsingBuiltInNodeForMcp?: boolean;
 }
 
 export interface InstallationPaths {
@@ -58,4 +57,18 @@ export interface HttpRetryOptions {
   retries: number;
   retryDelay: number;
   timeout: number;
+}
+
+export type MCPClient = 'claude' | 'claude-code' | 'codex' | 'gemini' | 'other';
+
+export interface MCPClientConfig {
+  name: string;
+  configExample: string;
+  instructions: string[];
+  configPath?: string;
+}
+
+export interface ConfigGenerationOptions {
+  installPath: string;
+  mcpClient: MCPClient;
 }

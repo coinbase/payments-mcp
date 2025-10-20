@@ -15,7 +15,7 @@ Services Layer
 ├── VersionService     - Version comparison using semver
 ├── DownloadService    - Package download and ZIP extraction
 ├── InstallService     - npm/electron installation
-└── ConfigService      - Claude Desktop configuration
+└── ConfigService      - MCP client configuration
     ↓
 Utilities Layer (logger, http, file, path utilities)
 ```
@@ -102,10 +102,10 @@ checkNodeAvailability(): Promise<boolean>                  // Prerequisite check
 
 ### ConfigService (`configService.ts`)
 
-**Purpose**: Generates and manages Claude Desktop MCP server configuration.
+**Purpose**: Generates and manages MCP client configuration.
 
 **Key Responsibilities**:
-- Creates properly formatted Claude Desktop configuration JSON
+- Creates properly formatted MCP client configuration JSON OR CLI command
 - Provides cross-platform configuration file path detection
 - Displays installation instructions and troubleshooting information
 - Validates configuration structure
@@ -113,9 +113,9 @@ checkNodeAvailability(): Promise<boolean>                  // Prerequisite check
 **Key Methods**:
 ```typescript
 generateClaudeConfig(installPath: string): ClaudeDesktopConfig  // Create config
-displayConfigInstructions(config: ClaudeDesktopConfig): void   // User guidance
-validateConfig(config: ClaudeDesktopConfig): boolean           // Structure check
-getClaudeConfigPath(): string | null                           // Platform paths
+displayConfigInstructions(config: ClaudeDesktopConfig): void    // User guidance
+validateConfig(config: ClaudeDesktopConfig): boolean            // Structure check
+getConfigPath(): string | null                                  // Platform paths
 ```
 
 **Generated Configuration**:
@@ -142,7 +142,7 @@ src/
 │   ├── versionService.ts     # Version checking and comparison
 │   ├── downloadService.ts    # Package download and extraction
 │   ├── installService.ts     # npm/electron installation
-│   └── configService.ts      # Claude Desktop configuration
+│   └── configService.ts      # MCP client configuration
 └── utils/                    # Utility layer
     ├── logger.ts             # Colored terminal output
     ├── httpUtils.ts          # HTTP client with retry logic
@@ -174,7 +174,3 @@ if (versionInfo.needsUpdate) {
   await downloadService.downloadAndExtract(installPath);
 }
 ```
-
-## Testing & Error Handling
-
-Services are unit tested in `__tests__/` and follow a **fail-fast** approach with early validation, automatic cleanup, and descriptive error messages. Each service can be developed and tested independently while providing clear interfaces for the orchestrator.

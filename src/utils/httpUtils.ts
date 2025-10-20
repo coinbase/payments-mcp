@@ -169,25 +169,6 @@ export class HttpUtils {
     }, options);
   }
 
-  isNetworkError(error: unknown): boolean {
-    const err = error as {
-      code?: string;
-      response?: { status: number };
-      request?: unknown;
-      message?: string;
-    };
-    return !!(
-      err.code === 'ECONNRESET' ||
-      err.code === 'ENOTFOUND' ||
-      err.code === 'ECONNREFUSED' ||
-      err.code === 'ETIMEDOUT' ||
-      err.code === 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY' ||
-      err.code === 'SELF_SIGNED_CERT_IN_CHAIN' ||
-      err.code === 'CERT_HAS_EXPIRED' ||
-      (err.response && err.response.status >= 500)
-    );
-  }
-
   getErrorMessage(error: unknown): string {
     const err = error as {
       code?: string;

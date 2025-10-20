@@ -14,7 +14,7 @@ src/
 │   ├── versionService.ts   # Version checking and comparison
 │   ├── downloadService.ts  # Package download and extraction
 │   ├── installService.ts   # npm/electron installation
-│   └── configService.ts    # Claude Desktop configuration
+│   └── configService.ts    # MCP client configuration
 └── utils/                  # Utility layer
     ├── logger.ts          # Colored terminal output
     ├── httpUtils.ts       # HTTP client with retry logic

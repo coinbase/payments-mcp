@@ -7,8 +7,6 @@ on:
         description: 'Version to test (e.g., v1.0.0)'
         required: true
         type: string
-  pull_request:
-    branches: [main]
 
 permissions:
   id-token: write # Required for OIDC trusted publishing

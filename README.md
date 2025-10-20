@@ -29,12 +29,12 @@ npx @coinbase/payments-mcp --client <client>
 
 The installer supports **automatic configuration** for compatible MCP clients:
 
-**File-based (Claude Desktop):**
+**File-based (e.g. Claude Desktop):**
 - Automatically creates or updates the configuration file
 - Merges with existing MCP servers without overwriting
 - Backs up malformed configs before fixing
 
-**CLI-based (Claude Code, Codex, Gemini):**
+**CLI-based (e.g. Claude Code, Codex, Gemini):**
 - Executes the client's configuration CLI command
 - Automatically adds payments-mcp using the client's native tools
 
@@ -57,8 +57,8 @@ If you skip automatic configuration, detailed setup instructions will be display
 {
   "mcpServers": {
     "payments-mcp": {
-      "command": "npm",
-      "args": ["--silent", "-C", "~/.payments-mcp", "run", "start"]
+      "command": "node",
+      "args": ["~/.payments-mcp/bundle.js"]
     }
   }
 }

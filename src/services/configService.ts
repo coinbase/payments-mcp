@@ -13,19 +13,22 @@ interface ClientInfo {
   displayName: string;
   configPath?: (homeDir: string) => string;
   supportsAutoConfig: 'file' | 'cli' | false; // 'file' = JSON file config, 'cli' = CLI command config, false = manual only
-  getConfigExample: (npmExecutable: string, installPath: string) => string;
+  getConfigExample: (installPath: string) => string;
   getInstructions: () => string[];
 }
 
 export class ConfigService {
   private logger: Logger;
 
+  constructor(logger: Logger) {
+    this.logger = logger;
+  }
+
   private readonly clientRegistry: Record<MCPClient, ClientInfo> = {
     claude: {
       displayName: 'Claude Desktop',
       configPath: (homeDir: string) => {
-        const platform = process.platform;
-        switch (platform) {
+        switch (process.platform) {
           case 'darwin':
             return `${homeDir}/Library/Application Support/Claude/claude_desktop_config.json`;
           case 'win32':
@@ -35,10 +38,8 @@ export class ConfigService {
         }
       },
       supportsAutoConfig: 'file',
-      getConfigExample: (npmExecutable: string, installPath: string) =>
-        this.formatConfigForDisplay(
-          this.generateConfig(installPath, npmExecutable)
-        ),
+      getConfigExample: (installPath: string) =>
+        JSON.stringify(this.generateConfig(installPath), null, 2),
       getInstructions: () => [
         'Open Claude Desktop application',
         'Go to Settings → Developer → Local MCP Servers',
@@ -51,8 +52,8 @@ export class ConfigService {
       displayName: 'Claude Code',
       configPath: (homeDir: string) => `${homeDir}/.claude/settings.json`,
       supportsAutoConfig: 'cli',
-      getConfigExample: (npmExecutable: string, installPath: string) =>
-        `claude mcp add --transport stdio payments-mcp --scope user "${npmExecutable} --silent -C ${installPath} run start"`,
+      getConfigExample: (installPath: string) =>
+        `claude mcp add --transport stdio payments-mcp --scope user "${PathUtils.getNodeExecutable()} ${path.join(installPath, 'bundle.js')}"`,
       getInstructions: () => [
         'Run the command shown above to configure Claude Code.',
         'Configuration will be stored in ~/.claude/settings.json',
@@ -63,8 +64,8 @@ export class ConfigService {
       displayName: 'Codex CLI',
       configPath: (homeDir: string) => `${homeDir}/.codex/config.toml`,
       supportsAutoConfig: 'cli',
-      getConfigExample: (npmExecutable: string, installPath: string) =>
-        `codex mcp add payments-mcp -- ${npmExecutable} --silent -C ${installPath} run start`,
+      getConfigExample: (installPath: string) =>
+        `codex mcp add payments-mcp -- ${PathUtils.getNodeExecutable()} ${path.join(installPath, 'bundle.js')}`,
       getInstructions: () => [
         'Run the command shown above to configure Codex.',
         'Configuration will be stored in ~/.codex/config.toml',
@@ -75,8 +76,8 @@ export class ConfigService {
       displayName: 'Gemini CLI',
       configPath: (homeDir: string) => `${homeDir}/.gemini/settings.json`,
       supportsAutoConfig: 'cli',
-      getConfigExample: (npmExecutable: string, installPath: string) =>
-        `gemini mcp add payments-mcp --command "${npmExecutable}" --args "--silent,-C,${installPath},run,start"`,
+      getConfigExample: (installPath: string) =>
+        `gemini mcp add payments-mcp --command "${PathUtils.getNodeExecutable()}" --args "${path.join(installPath, 'bundle.js')}"`,
       getInstructions: () => [
         'Run the command shown above to configure Gemini.',
         'Configuration will be stored in ~/.gemini/settings.json',
@@ -86,10 +87,8 @@ export class ConfigService {
     other: {
       displayName: 'Other stdio-compatible MCP client',
       supportsAutoConfig: false,
-      getConfigExample: (npmExecutable: string, installPath: string) =>
-        this.formatConfigForDisplay(
-          this.generateConfig(installPath, npmExecutable)
-        ),
+      getConfigExample: (installPath: string) =>
+        JSON.stringify(this.generateConfig(installPath), null, 2),
       getInstructions: () => [
         'Refer to your MCP client documentation for MCP server configuration',
         'Add the configuration shown above to your client config file',
@@ -98,26 +97,19 @@ export class ConfigService {
     },
   };
 
-  constructor(logger: Logger) {
-    this.logger = logger;
-  }
-
   getMCPClientConfig(
     mcpClient: MCPClient,
-    installPath: string
+    installPath: string,
   ): MCPClientConfig {
     const clientInfo = this.clientRegistry[mcpClient];
     if (!clientInfo) {
       throw new Error(`Unsupported MCP client: ${mcpClient}`);
     }
 
-    const npmExecutable = PathUtils.getNpmExecutable();
-    const configPath = this.getConfigPath(mcpClient);
-
     return {
       name: clientInfo.displayName,
-      configPath,
-      configExample: clientInfo.getConfigExample(npmExecutable, installPath),
+      configPath: this.getConfigPath(mcpClient),
+      configExample: clientInfo.getConfigExample(installPath),
       instructions: clientInfo.getInstructions(),
     };
   }
@@ -129,30 +121,23 @@ export class ConfigService {
     }
 
     const homeDir = require('os').homedir();
-    const path = clientInfo.configPath(homeDir);
-    return path || undefined;
+    return clientInfo.configPath(homeDir) || undefined;
   }
 
-  generateConfig(installPath: string, npmExecutable?: string): MCPServerConfig {
-    const npm = npmExecutable || PathUtils.getNpmExecutable();
-
+  generateConfig(installPath: string): MCPServerConfig {
     return {
       mcpServers: {
         'payments-mcp': {
-          command: npm,
-          args: ['--silent', '-C', installPath, 'run', 'start'],
+          command: PathUtils.getNodeExecutable(),
+          args: [path.join(installPath, 'bundle.js')],
         },
       },
     };
   }
 
-  formatConfigForDisplay(config: MCPServerConfig): string {
-    return JSON.stringify(config, null, 2);
-  }
-
   displayConfigInstructionsForClient(
     mcpClient: MCPClient,
-    installPath?: string
+    installPath?: string,
   ): void {
     const clientConfig = this.getMCPClientConfig(mcpClient, installPath || '');
     const clientInfo = this.clientRegistry[mcpClient];
@@ -166,7 +151,7 @@ export class ConfigService {
 
     if (clientConfig.configPath) {
       this.logger.info(
-        `Config file location: ${chalk.cyan(clientConfig.configPath)}`
+        `Config file location: ${chalk.cyan(clientConfig.configPath)}`,
       );
       this.logger.newline();
     }
@@ -182,16 +167,13 @@ export class ConfigService {
 
     // For CLI-based clients, also show JSON backup option
     if (clientInfo?.supportsAutoConfig === 'cli') {
-      const npmExecutable = PathUtils.getNpmExecutable();
       this.logger.newline();
       this.logger.info('Or manually add this JSON to your config file:');
       this.logger.newline();
       console.log(
         chalk.gray(
-          this.formatConfigForDisplay(
-            this.generateConfig(installPath || '', npmExecutable)
-          )
-        )
+          JSON.stringify(this.generateConfig(installPath || ''), null, 2),
+        ),
       );
     }
 
@@ -203,7 +185,7 @@ export class ConfigService {
 
     this.logger.newline();
     this.logger.info(
-      `After completing these steps, you can use payments-mcp with ${clientConfig.name}.`
+      `After completing these steps, you can use payments-mcp with ${clientConfig.name}.`,
     );
     this.logger.separator();
   }
@@ -242,14 +224,17 @@ export class ConfigService {
       });
     } catch (error) {
       this.logger.debug(
-        `Config validation failed: ${(error as Error).message}`
+        `Config validation failed: ${(error as Error).message}`,
       );
       return false;
     }
   }
 
-  generateTroubleshootingInfo(): string[] {
-    return [
+  displayTroubleshootingInfo(): void {
+    this.logger.newline();
+    this.logger.info('Need help?');
+
+    const lines = [
       'Troubleshooting Tips:',
       '',
       '• Make sure your MCP client is completely closed before adding the configuration',
@@ -265,28 +250,19 @@ export class ConfigService {
       '',
       'For additional support, visit: https://github.com/coinbase/payments-mcp',
     ];
-  }
 
-  displayTroubleshootingInfo(): void {
-    this.logger.newline();
-    this.logger.info('Need help?');
-
-    const getLineColor = (line: string) => {
+    lines.forEach((line) => {
       if (
         line.startsWith('•') ||
         line.startsWith('Troubleshooting') ||
         line.startsWith('Common Issues')
       ) {
-        return chalk.yellow;
+        console.log(chalk.yellow(line));
+      } else if (line.includes('github.com')) {
+        console.log(chalk.blue(line));
+      } else {
+        console.log(chalk.white(line));
       }
-      if (line.includes('github.com')) {
-        return chalk.blue;
-      }
-      return chalk.white;
-    };
-
-    this.generateTroubleshootingInfo().forEach((line) => {
-      console.log(getLineColor(line)(line));
     });
   }
 
@@ -296,13 +272,12 @@ export class ConfigService {
    */
   async autoConfigureFile(
     mcpClient: MCPClient,
-    installPath: string
+    installPath: string,
   ): Promise<boolean> {
     const configPath = this.getConfigPath(mcpClient);
-
     if (!configPath) {
       this.logger.warn(
-        `Unable to determine config path for ${mcpClient} on this platform`
+        `Unable to determine config path for ${mcpClient} on this platform`,
       );
       return false;
     }
@@ -313,65 +288,42 @@ export class ConfigService {
       return false;
     }
 
-    // Only auto-configure clients that support file-based config
-    // (CLI-based clients should use their own CLI commands via autoConfigureCLI)
     if (clientInfo.supportsAutoConfig !== 'file') {
       this.logger.debug(
-        `${clientInfo.displayName} does not support file-based auto-config`
+        `${clientInfo.displayName} does not support file-based auto-config`,
       );
       return false;
     }
 
     try {
-      const npmExecutable = PathUtils.getNpmExecutable();
       const paymentsMcpConfig = {
-        command: npmExecutable,
-        args: ['--silent', '-C', installPath, 'run', 'start'],
+        command: PathUtils.getNodeExecutable(),
+        args: [path.join(installPath, 'bundle.js')],
       };
 
-      // Ensure the directory exists
-      const configDir = path.dirname(configPath);
-      await fs.ensureDir(configDir);
+      await fs.ensureDir(path.dirname(configPath));
 
-      // Read existing config or create new one
       let existingConfig: MCPServerConfig;
 
       if (await fs.pathExists(configPath)) {
-        this.logger.debug(`Reading existing config from ${configPath}`);
         const fileContent = await fs.readFile(configPath, 'utf-8');
 
         try {
           existingConfig = JSON.parse(fileContent);
-
-          // Ensure mcpServers object exists
           if (
             !existingConfig.mcpServers ||
             typeof existingConfig.mcpServers !== 'object'
           ) {
             existingConfig.mcpServers = {};
           }
-        } catch (parseError) {
-          this.logger.warn(
-            'Existing config file is malformed, creating backup and starting fresh'
-          );
-          // Backup the malformed file
+        } catch {
+          this.logger.warn('Config file is malformed, creating backup');
           await fs.copy(configPath, `${configPath}.backup.${Date.now()}`);
           existingConfig = { mcpServers: {} };
         }
 
-        // Check if payments-mcp already exists
-        if (existingConfig.mcpServers['payments-mcp']) {
-          this.logger.debug('payments-mcp config already exists, updating...');
-        } else {
-          this.logger.debug('Adding payments-mcp to existing config');
-        }
-
-        // Merge or update the payments-mcp config
         existingConfig.mcpServers['payments-mcp'] = paymentsMcpConfig;
       } else {
-        this.logger.debug(
-          `Config file doesn't exist, creating new one at ${configPath}`
-        );
         existingConfig = {
           mcpServers: {
             'payments-mcp': paymentsMcpConfig,
@@ -379,24 +331,20 @@ export class ConfigService {
         };
       }
 
-      // Write the config back
       await fs.writeFile(
         configPath,
         JSON.stringify(existingConfig, null, 2),
-        'utf-8'
+        'utf-8',
       );
 
       this.logger.success(
-        `${clientInfo.displayName} config updated at ${configPath}`
+        `${clientInfo.displayName} config updated at ${configPath}`,
       );
       return true;
     } catch (error) {
       this.logger.error(
         `Failed to auto-configure ${clientInfo.displayName}`,
-        error as Error
-      );
-      this.logger.warn(
-        'You can manually configure using the instructions shown above'
+        error as Error,
       );
       return false;
     }
@@ -408,7 +356,7 @@ export class ConfigService {
    */
   async autoConfigureCLI(
     mcpClient: MCPClient,
-    installPath: string
+    installPath: string,
   ): Promise<boolean> {
     const clientInfo = this.clientRegistry[mcpClient];
     if (!clientInfo) {
@@ -416,126 +364,79 @@ export class ConfigService {
       return false;
     }
 
-    // Only auto-configure clients that support CLI-based config
     if (clientInfo.supportsAutoConfig !== 'cli') {
       this.logger.debug(
-        `${clientInfo.displayName} does not support CLI-based auto-config`
+        `${clientInfo.displayName} does not support CLI-based auto-config`,
       );
       return false;
     }
 
     try {
-      const npmExecutable = PathUtils.getNpmExecutable();
-      const command = clientInfo.getConfigExample(npmExecutable, installPath);
+      const command = clientInfo.getConfigExample(installPath);
 
       this.logger.debug(`Executing CLI command: ${command}`);
 
-      // Execute the CLI command
-      const { stdout, stderr } = await execAsync(command, {
-        timeout: 30000, // 30 second timeout
-      });
+      const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
 
-      if (stdout) {
-        this.logger.debug(`CLI output: ${stdout.trim()}`);
-      }
-
-      if (stderr) {
-        this.logger.debug(`CLI stderr: ${stderr.trim()}`);
-      }
+      if (stdout) this.logger.debug(`CLI output: ${stdout.trim()}`);
+      if (stderr) this.logger.debug(`CLI stderr: ${stderr.trim()}`);
 
       this.logger.success(
-        `${clientInfo.displayName} configured successfully via CLI`
+        `${clientInfo.displayName} configured successfully via CLI`,
       );
       return true;
     } catch (error) {
       const err = error as Error & { code?: string; stderr?: string };
 
-      // Check if the CLI tool itself is not found
       if (err.code === 'ENOENT' || err.message.includes('not found')) {
-        this.logger.warn(
-          `${clientInfo.displayName} CLI tool not found. Please install it first or configure manually.`
-        );
+        this.logger.warn(`${clientInfo.displayName} CLI tool not found`);
       } else {
         this.logger.error(
           `Failed to auto-configure ${clientInfo.displayName} via CLI`,
-          err
+          err,
         );
-        if (err.stderr) {
-          this.logger.debug(`Command stderr: ${err.stderr}`);
-        }
+        if (err.stderr) this.logger.debug(`Command stderr: ${err.stderr}`);
       }
 
-      this.logger.warn(
-        'You can manually configure using the instructions shown above'
-      );
       return false;
     }
   }
 
-  /**
-   * Check if an MCP client's config file exists
-   */
   async configFileExists(mcpClient: MCPClient): Promise<boolean> {
     const configPath = this.getConfigPath(mcpClient);
-    if (!configPath) {
-      return false;
-    }
-    return fs.pathExists(configPath);
+    return configPath ? fs.pathExists(configPath) : false;
   }
 
-  /**
-   * Read an MCP client's config file
-   */
   async readConfigFile(mcpClient: MCPClient): Promise<MCPServerConfig | null> {
     const configPath = this.getConfigPath(mcpClient);
-    if (!configPath || !(await fs.pathExists(configPath))) {
-      return null;
-    }
+    if (!configPath || !(await fs.pathExists(configPath))) return null;
 
     try {
-      const fileContent = await fs.readFile(configPath, 'utf-8');
-      return JSON.parse(fileContent);
+      return JSON.parse(await fs.readFile(configPath, 'utf-8'));
     } catch (error) {
       this.logger.debug(
-        `Failed to read ${mcpClient} config: ${(error as Error).message}`
+        `Failed to read ${mcpClient} config: ${(error as Error).message}`,
       );
       return null;
     }
   }
 
-  /**
-   * Check if a client supports automatic file configuration
-   */
   supportsAutoFileConfig(mcpClient: MCPClient): boolean {
     const clientInfo = this.clientRegistry[mcpClient];
-    if (!clientInfo) {
-      return false;
-    }
     return (
+      !!clientInfo &&
       clientInfo.supportsAutoConfig === 'file' &&
       !!this.getConfigPath(mcpClient)
     );
   }
 
-  /**
-   * Check if a client supports automatic CLI-based configuration
-   */
   supportsAutoCLIConfig(mcpClient: MCPClient): boolean {
     const clientInfo = this.clientRegistry[mcpClient];
-    if (!clientInfo) {
-      return false;
-    }
-    return clientInfo.supportsAutoConfig === 'cli';
+    return !!clientInfo && clientInfo.supportsAutoConfig === 'cli';
   }
 
-  /**
-   * Check if a client supports any form of automatic configuration
-   */
   supportsAnyAutoConfig(mcpClient: MCPClient): boolean {
     const clientInfo = this.clientRegistry[mcpClient];
-    if (!clientInfo) {
-      return false;
-    }
-    return clientInfo.supportsAutoConfig !== false;
+    return !!clientInfo && clientInfo.supportsAutoConfig !== false;
   }
 }

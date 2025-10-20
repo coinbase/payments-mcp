@@ -21,27 +21,26 @@ export class DownloadService {
 
   async downloadAndExtract(targetPath: string): Promise<void> {
     let tempZipPath: string | null = null;
-    
+
     try {
       await this.fileUtils.ensureDir(targetPath);
-      
+
       tempZipPath = await this.fileUtils.getTempFilePath('.zip');
-      
+
       this.logger.info('Downloading payments-mcp package...');
       await this.downloadWithProgress(tempZipPath);
-      
+
       this.logger.info('Extracting package...');
       await this.extractZip(tempZipPath, targetPath);
-      
+
       this.logger.success('Download and extraction completed successfully');
-      
     } catch (error) {
       this.logger.error('Download and extraction failed', error as Error);
-      
+
       if (await this.fileUtils.exists(targetPath)) {
         await this.fileUtils.removeDir(targetPath);
       }
-      
+
       throw error;
     } finally {
       if (tempZipPath) {
@@ -52,7 +51,7 @@ export class DownloadService {
 
   private async downloadWithProgress(filePath: string): Promise<void> {
     let lastPercent = -1;
-    
+
     const onProgress = (progress: DownloadProgress) => {
       const percent = Math.floor(progress.percent);
       if (percent !== lastPercent && percent % 10 === 0) {
@@ -63,14 +62,19 @@ export class DownloadService {
 
     try {
       await this.httpUtils.downloadFile(this.downloadUrl, filePath, onProgress);
-      console.log(''); 
+      console.log('');
     } catch (error) {
-      console.log(''); 
-      throw new Error(`Failed to download from ${this.downloadUrl}: ${this.httpUtils.getErrorMessage(error)}`);
+      console.log('');
+      throw new Error(
+        `Failed to download from ${this.downloadUrl}: ${this.httpUtils.getErrorMessage(error)}`,
+      );
     }
   }
 
-  private async extractZip(zipPath: string, extractPath: string): Promise<void> {
+  private async extractZip(
+    zipPath: string,
+    extractPath: string,
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       yauzl.open(zipPath, { lazyEntries: true }, (err, zipfile) => {
         if (err) {
@@ -84,19 +88,16 @@ export class DownloadService {
         }
 
         let extractedCount = 0;
-        let _totalEntries = 0;
 
         zipfile.on('entry', async (entry) => {
-          _totalEntries++;
-          
           try {
             await this.extractEntry(zipfile, entry, extractPath);
             extractedCount++;
-            
+
             if (extractedCount % 10 === 0) {
               process.stdout.write('.');
             }
-            
+
             zipfile.readEntry();
           } catch (error) {
             zipfile.close();
@@ -105,7 +106,7 @@ export class DownloadService {
         });
 
         zipfile.on('end', () => {
-          console.log(''); 
+          console.log('');
           this.logger.debug(`Extracted ${extractedCount} files from ZIP`);
           resolve();
         });
@@ -119,10 +120,14 @@ export class DownloadService {
     });
   }
 
-  private async extractEntry(zipfile: yauzl.ZipFile, entry: yauzl.Entry, extractPath: string): Promise<void> {
+  private async extractEntry(
+    zipfile: yauzl.ZipFile,
+    entry: yauzl.Entry,
+    extractPath: string,
+  ): Promise<void> {
     const entryPath = this.sanitizeEntryPath(entry.fileName);
     const fullPath = path.join(extractPath, entryPath);
-    
+
     if (this.isUnsafePath(entryPath) || !fullPath.startsWith(extractPath)) {
       throw new Error(`Unsafe file path detected in ZIP: ${entry.fileName}`);
     }
@@ -149,9 +154,11 @@ export class DownloadService {
           await this.fileUtils.ensureDir(dir);
 
           const writeStream = fs.createWriteStream(fullPath);
-          
+
           writeStream.on('error', (error) => {
-            reject(new Error(`Failed to write file ${fullPath}: ${error.message}`));
+            reject(
+              new Error(`Failed to write file ${fullPath}: ${error.message}`),
+            );
           });
 
           writeStream.on('finish', () => {
@@ -159,7 +166,11 @@ export class DownloadService {
           });
 
           readStream.on('error', (error) => {
-            reject(new Error(`Failed to read entry ${entry.fileName}: ${error.message}`));
+            reject(
+              new Error(
+                `Failed to read entry ${entry.fileName}: ${error.message}`,
+              ),
+            );
           });
 
           readStream.pipe(writeStream);
@@ -173,7 +184,7 @@ export class DownloadService {
   private sanitizeEntryPath(entryPath: string): string {
     return entryPath
       .split('/')
-      .filter(segment => segment && segment !== '.' && segment !== '..')
+      .filter((segment) => segment && segment !== '.' && segment !== '..')
       .join('/');
   }
 
@@ -203,7 +214,7 @@ export class DownloadService {
             resolve(false);
             return;
           }
-          
+
           zipfile.close();
           resolve(true);
         });
@@ -222,7 +233,9 @@ export class DownloadService {
       await this.httpUtils.head(this.downloadUrl);
       return true;
     } catch (error) {
-      this.logger.debug(`Download availability check failed: ${this.httpUtils.getErrorMessage(error)}`);
+      this.logger.debug(
+        `Download availability check failed: ${this.httpUtils.getErrorMessage(error)}`,
+      );
       return false;
     }
   }

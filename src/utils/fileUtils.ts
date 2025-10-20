@@ -30,7 +30,7 @@ export class FileUtils {
       }
     } catch (error) {
       throw new Error(
-        `Failed to create directory ${dirPath}: ${(error as Error).message}`
+        `Failed to create directory ${dirPath}: ${(error as Error).message}`,
       );
     }
   }
@@ -43,7 +43,7 @@ export class FileUtils {
       }
     } catch (error) {
       throw new Error(
-        `Failed to remove directory ${dirPath}: ${(error as Error).message}`
+        `Failed to remove directory ${dirPath}: ${(error as Error).message}`,
       );
     }
   }
@@ -57,7 +57,7 @@ export class FileUtils {
         throw new Error(`File not found: ${filePath}`);
       }
       throw new Error(
-        `Failed to read JSON file ${filePath}: ${(error as Error).message}`
+        `Failed to read JSON file ${filePath}: ${(error as Error).message}`,
       );
     }
   }
@@ -67,7 +67,7 @@ export class FileUtils {
       return await fs.stat(filePath);
     } catch (error) {
       throw new Error(
-        `Failed to get file stats for ${filePath}: ${(error as Error).message}`
+        `Failed to get file stats for ${filePath}: ${(error as Error).message}`,
       );
     }
   }
@@ -88,7 +88,7 @@ export class FileUtils {
       }
     } catch (error) {
       this.logger.warn(
-        `Failed to cleanup temp file ${filePath}: ${(error as Error).message}`
+        `Failed to cleanup temp file ${filePath}: ${(error as Error).message}`,
       );
     }
   }

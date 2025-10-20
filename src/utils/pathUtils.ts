@@ -28,7 +28,6 @@ export class PathUtils {
   }
 
   static getNpmExecutable(): string {
-    const isWindows = os.platform() === 'win32';
-    return isWindows ? 'npm.cmd' : 'npm';
+    return process.platform === 'win32' ? 'npm.cmd' : 'npm';
   }
 }

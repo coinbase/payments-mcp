@@ -25,7 +25,7 @@ export class HttpUtils {
 
     if (isDevelopment) {
       this.logger.debug(
-        'Using relaxed SSL verification for development environment'
+        'Using relaxed SSL verification for development environment',
       );
       return new https.Agent({
         rejectUnauthorized: false, // Allow self-signed certificates in dev
@@ -43,7 +43,7 @@ export class HttpUtils {
 
   private async executeWithRetry<T>(
     operation: () => Promise<T>,
-    options: Partial<HttpRetryOptions> = {}
+    options: Partial<HttpRetryOptions> = {},
   ): Promise<T> {
     const opts = { ...this.defaultRetryOptions, ...options };
     let lastError: Error;
@@ -60,7 +60,7 @@ export class HttpUtils {
 
         const delay = opts.retryDelay * Math.pow(2, attempt - 1);
         this.logger.debug(
-          `Request failed (attempt ${attempt}/${opts.retries}), retrying in ${delay}ms...`
+          `Request failed (attempt ${attempt}/${opts.retries}), retrying in ${delay}ms...`,
         );
         await this.sleep(delay);
       }
@@ -71,7 +71,7 @@ export class HttpUtils {
 
   async get<T = unknown>(
     url: string,
-    options: Partial<HttpRetryOptions> = {}
+    options: Partial<HttpRetryOptions> = {},
   ): Promise<AxiosResponse<T>> {
     return this.executeWithRetry(async () => {
       const config: AxiosRequestConfig = {
@@ -95,7 +95,7 @@ export class HttpUtils {
       total: number;
       percent: number;
     }) => void,
-    options: Partial<HttpRetryOptions> = {}
+    options: Partial<HttpRetryOptions> = {},
   ): Promise<void> {
     return this.executeWithRetry(async () => {
       const config: AxiosRequestConfig = {
@@ -112,7 +112,7 @@ export class HttpUtils {
 
       const totalLength = parseInt(
         response.headers['content-length'] || '0',
-        10
+        10,
       );
       let transferredLength = 0;
 
@@ -153,7 +153,7 @@ export class HttpUtils {
 
   async head(
     url: string,
-    options: Partial<HttpRetryOptions> = {}
+    options: Partial<HttpRetryOptions> = {},
   ): Promise<AxiosResponse> {
     return this.executeWithRetry(async () => {
       const config: AxiosRequestConfig = {

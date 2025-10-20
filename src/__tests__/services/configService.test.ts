@@ -106,8 +106,8 @@ describe('ConfigService', () => {
       const config: MCPServerConfig = {
         mcpServers: {
           'payments-mcp': {
-            command: 'npm',
-            args: ['run', 'start'],
+            command: 'node',
+            args: ['/path/to/bundle.js'],
           },
         },
       };

@@ -1,9 +1,13 @@
 import { ConfigService } from '../../services/configService';
 import { Logger } from '../../utils/logger';
-import { MCPServerConfig } from '../../types';
+import { MCPServerConfig, MCPClient } from '../../types';
+import fs from 'fs-extra';
+import os from 'os';
 
 // Mock dependencies
 jest.mock('../../utils/logger');
+jest.mock('fs-extra');
+jest.mock('os');
 
 describe('ConfigService', () => {
   let configService: ConfigService;
@@ -16,13 +20,21 @@ describe('ConfigService', () => {
 
   describe('validateConfig', () => {
     it('should return false for null/undefined config', () => {
-      expect(configService.validateConfig(null as any)).toBe(false);
-      expect(configService.validateConfig(undefined as any)).toBe(false);
+      expect(
+        configService.validateConfig(null as unknown as MCPServerConfig)
+      ).toBe(false);
+      expect(
+        configService.validateConfig(undefined as unknown as MCPServerConfig)
+      ).toBe(false);
     });
 
     it('should return false for non-object config', () => {
-      expect(configService.validateConfig('invalid' as any)).toBe(false);
-      expect(configService.validateConfig(123 as any)).toBe(false);
+      expect(
+        configService.validateConfig('invalid' as unknown as MCPServerConfig)
+      ).toBe(false);
+      expect(
+        configService.validateConfig(123 as unknown as MCPServerConfig)
+      ).toBe(false);
     });
 
     it('should return false for config without mcpServers', () => {
@@ -31,7 +43,7 @@ describe('ConfigService', () => {
     });
 
     it('should return false for config with non-object mcpServers', () => {
-      const config = { mcpServers: 'invalid' } as any;
+      const config = { mcpServers: 'invalid' } as unknown as MCPServerConfig;
       expect(configService.validateConfig(config)).toBe(false);
     });
 
@@ -49,7 +61,7 @@ describe('ConfigService', () => {
             args: [],
           },
         },
-      } as any;
+      } as unknown as MCPServerConfig;
       expect(configService.validateConfig(config)).toBe(false);
     });
 
@@ -61,7 +73,7 @@ describe('ConfigService', () => {
             args: [],
           },
         },
-      } as any;
+      } as unknown as MCPServerConfig;
       expect(configService.validateConfig(config)).toBe(false);
     });
 
@@ -73,7 +85,7 @@ describe('ConfigService', () => {
             args: 'invalid',
           },
         },
-      } as any;
+      } as unknown as MCPServerConfig;
       expect(configService.validateConfig(config)).toBe(false);
     });
 
@@ -86,7 +98,7 @@ describe('ConfigService', () => {
             env: 'invalid',
           },
         },
-      } as any;
+      } as unknown as MCPServerConfig;
       expect(configService.validateConfig(config)).toBe(false);
     });
 
@@ -94,15 +106,234 @@ describe('ConfigService', () => {
       const config: MCPServerConfig = {
         mcpServers: {
           'payments-mcp': {
-            command: 'node',
-            args: ['./dist/index.js'],
-            env: {
-              NODE_ENV: 'production',
-            },
+            command: 'npm',
+            args: ['run', 'start'],
           },
         },
       };
       expect(configService.validateConfig(config)).toBe(true);
+    });
+  });
+
+  describe('supportsAutoFileConfig', () => {
+    it('should return true for Claude Desktop', () => {
+      expect(configService.supportsAutoFileConfig('claude')).toBe(true);
+    });
+
+    it('should return false for CLI-based clients', () => {
+      expect(configService.supportsAutoFileConfig('claude-code')).toBe(false);
+      expect(configService.supportsAutoFileConfig('codex')).toBe(false);
+      expect(configService.supportsAutoFileConfig('gemini')).toBe(false);
+    });
+
+    it('should return false for other clients', () => {
+      expect(configService.supportsAutoFileConfig('other')).toBe(false);
+    });
+
+    it('should return false for invalid clients', () => {
+      expect(configService.supportsAutoFileConfig('invalid' as MCPClient)).toBe(
+        false
+      );
+    });
+  });
+
+  describe('configFileExists', () => {
+    beforeEach(() => {
+      (os.homedir as jest.Mock).mockReturnValue('/home/testuser');
+      (os.platform as jest.Mock).mockReturnValue('darwin');
+    });
+
+    it('should return true if config file exists', async () => {
+      (fs.pathExists as jest.Mock).mockResolvedValue(true);
+
+      const result = await configService.configFileExists('claude');
+
+      expect(result).toBe(true);
+      expect(fs.pathExists).toHaveBeenCalled();
+    });
+
+    it('should return false if config file does not exist', async () => {
+      (fs.pathExists as jest.Mock).mockResolvedValue(false);
+
+      const result = await configService.configFileExists('claude');
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false for clients without config path', async () => {
+      const result = await configService.configFileExists('other');
+
+      expect(result).toBe(false);
+      expect(fs.pathExists).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('readConfigFile', () => {
+    beforeEach(() => {
+      (os.homedir as jest.Mock).mockReturnValue('/home/testuser');
+      (os.platform as jest.Mock).mockReturnValue('darwin');
+    });
+
+    it('should read and parse existing config file', async () => {
+      const mockConfig: MCPServerConfig = {
+        mcpServers: {
+          'existing-server': {
+            command: 'node',
+            args: ['server.js'],
+          },
+        },
+      };
+
+      (fs.pathExists as jest.Mock).mockResolvedValue(true);
+      (fs.readFile as unknown as jest.Mock).mockResolvedValue(
+        JSON.stringify(mockConfig)
+      );
+
+      const result = await configService.readConfigFile('claude');
+
+      expect(result).toEqual(mockConfig);
+      expect(fs.readFile).toHaveBeenCalledWith(expect.any(String), 'utf-8');
+    });
+
+    it('should return null if config file does not exist', async () => {
+      (fs.pathExists as jest.Mock).mockResolvedValue(false);
+
+      const result = await configService.readConfigFile('claude');
+
+      expect(result).toBe(null);
+      expect(fs.readFile).not.toHaveBeenCalled();
+    });
+
+    it('should return null if config path is not available', async () => {
+      const result = await configService.readConfigFile('other');
+
+      expect(result).toBe(null);
+    });
+
+    it('should return null on read error', async () => {
+      (fs.pathExists as jest.Mock).mockResolvedValue(true);
+      (fs.readFile as unknown as jest.Mock).mockRejectedValue(
+        new Error('Read error')
+      );
+
+      const result = await configService.readConfigFile('claude');
+
+      expect(result).toBe(null);
+    });
+  });
+
+  describe('autoConfigureFile', () => {
+    const mockInstallPath = '/home/testuser/.payments-mcp';
+
+    beforeEach(() => {
+      (os.homedir as jest.Mock).mockReturnValue('/home/testuser');
+      (os.platform as jest.Mock).mockReturnValue('darwin');
+    });
+
+    it('should create new config file if it does not exist', async () => {
+      (fs.pathExists as jest.Mock).mockResolvedValue(false);
+      (fs.ensureDir as jest.Mock).mockResolvedValue(undefined);
+      (fs.writeFile as unknown as jest.Mock).mockResolvedValue(undefined);
+
+      const result = await configService.autoConfigureFile(
+        'claude',
+        mockInstallPath
+      );
+
+      expect(result).toBe(true);
+      expect(fs.ensureDir).toHaveBeenCalled();
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('payments-mcp'),
+        'utf-8'
+      );
+    });
+
+    it('should merge with existing config file', async () => {
+      const existingConfig: MCPServerConfig = {
+        mcpServers: {
+          'existing-server': {
+            command: 'node',
+            args: ['server.js'],
+          },
+        },
+      };
+
+      (fs.pathExists as jest.Mock).mockResolvedValue(true);
+      (fs.readFile as unknown as jest.Mock).mockResolvedValue(
+        JSON.stringify(existingConfig)
+      );
+      (fs.ensureDir as jest.Mock).mockResolvedValue(undefined);
+      (fs.writeFile as unknown as jest.Mock).mockResolvedValue(undefined);
+
+      const result = await configService.autoConfigureFile(
+        'claude',
+        mockInstallPath
+      );
+
+      expect(result).toBe(true);
+
+      const writeCall = (fs.writeFile as unknown as jest.Mock).mock.calls[0];
+      const writtenConfig = JSON.parse(writeCall[1]);
+
+      expect(writtenConfig.mcpServers).toHaveProperty('existing-server');
+      expect(writtenConfig.mcpServers).toHaveProperty('payments-mcp');
+    });
+
+    it('should create backup for malformed config file', async () => {
+      (fs.pathExists as jest.Mock).mockResolvedValue(true);
+      (fs.readFile as unknown as jest.Mock).mockResolvedValue('invalid json');
+      (fs.copy as jest.Mock).mockResolvedValue(undefined);
+      (fs.ensureDir as jest.Mock).mockResolvedValue(undefined);
+      (fs.writeFile as unknown as jest.Mock).mockResolvedValue(undefined);
+
+      const result = await configService.autoConfigureFile(
+        'claude',
+        mockInstallPath
+      );
+
+      expect(result).toBe(true);
+      expect(fs.copy).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('.backup.')
+      );
+    });
+
+    it('should return false for CLI-based clients', async () => {
+      const result = await configService.autoConfigureFile(
+        'claude-code',
+        mockInstallPath
+      );
+
+      expect(result).toBe(false);
+      expect(fs.writeFile).not.toHaveBeenCalled();
+    });
+
+    it('should return false if config path is not available', async () => {
+      (os.platform as jest.Mock).mockReturnValue('linux'); // Claude Desktop not available on Linux
+
+      const result = await configService.autoConfigureFile(
+        'claude',
+        mockInstallPath
+      );
+
+      expect(result).toBe(false);
+      expect(fs.writeFile).not.toHaveBeenCalled();
+    });
+
+    it('should return false on write error', async () => {
+      (fs.pathExists as jest.Mock).mockResolvedValue(false);
+      (fs.ensureDir as jest.Mock).mockResolvedValue(undefined);
+      (fs.writeFile as unknown as jest.Mock).mockRejectedValue(
+        new Error('Write error')
+      );
+
+      const result = await configService.autoConfigureFile(
+        'claude',
+        mockInstallPath
+      );
+
+      expect(result).toBe(false);
     });
   });
 });

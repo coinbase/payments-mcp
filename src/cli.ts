@@ -20,6 +20,11 @@ program
   )
   .option('-v, --verbose', 'enable verbose logging')
   .option('-f, --force', 'force reinstallation even if up to date')
+  .option(
+    '--auto-config',
+    'automatically configure the MCP client without prompting (for supported clients)'
+  )
+  .option('--no-auto-config', 'skip automatic configuration prompt')
   .action(async (options) => {
     const logger = new Logger(options.verbose);
     const installer = new PaymentsMCPInstaller(logger);
@@ -29,6 +34,7 @@ program
         mcpClient: options.client,
         verbose: options.verbose,
         force: options.force,
+        autoConfig: options.autoConfig,
       });
     } catch (error) {
       process.exit(1);
@@ -79,6 +85,7 @@ program
         mcpClient: options.client,
         verbose: options.verbose,
         force: options.force,
+        autoConfig: options.autoConfig,
       });
     } catch (error) {
       process.exit(1);
@@ -89,7 +96,12 @@ program
     'MCP client to configure (claude, claude-code, codex, gemini, other)'
   )
   .option('-v, --verbose', 'enable verbose logging')
-  .option('-f, --force', 'force reinstallation even if up to date');
+  .option('-f, --force', 'force reinstallation even if up to date')
+  .option(
+    '--auto-config',
+    'automatically configure the MCP client without prompting (for supported clients)'
+  )
+  .option('--no-auto-config', 'skip automatic configuration prompt');
 
 program.configureHelp({
   sortSubcommands: true,

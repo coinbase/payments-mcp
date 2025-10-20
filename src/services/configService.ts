@@ -1,12 +1,18 @@
 import chalk from 'chalk';
+import fs from 'fs-extra';
+import path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { MCPClient, MCPClientConfig, MCPServerConfig } from '../types';
 import { PathUtils } from '../utils/pathUtils';
 import { Logger } from '../utils/logger';
 
+const execAsync = promisify(exec);
+
 interface ClientInfo {
   displayName: string;
   configPath?: (homeDir: string) => string;
-  supportsAutoConfig: boolean; // true = show CLI command, false = show JSON config
+  supportsAutoConfig: 'file' | 'cli' | false; // 'file' = JSON file config, 'cli' = CLI command config, false = manual only
   getConfigExample: (npmExecutable: string, installPath: string) => string;
   getInstructions: () => string[];
 }
@@ -28,7 +34,7 @@ export class ConfigService {
             return '';
         }
       },
-      supportsAutoConfig: false,
+      supportsAutoConfig: 'file',
       getConfigExample: (npmExecutable: string, installPath: string) =>
         this.formatConfigForDisplay(
           this.generateConfig(installPath, npmExecutable)
@@ -45,7 +51,7 @@ export class ConfigService {
     'claude-code': {
       displayName: 'Claude Code',
       configPath: (homeDir: string) => `${homeDir}/.claude/settings.json`,
-      supportsAutoConfig: true,
+      supportsAutoConfig: 'cli',
       getConfigExample: (npmExecutable: string, installPath: string) =>
         `claude mcp add --transport stdio payments-mcp --scope user "${npmExecutable} --silent -C ${installPath} run start"`,
       getInstructions: () => [
@@ -57,7 +63,7 @@ export class ConfigService {
     codex: {
       displayName: 'Codex CLI',
       configPath: (homeDir: string) => `${homeDir}/.codex/config.toml`,
-      supportsAutoConfig: true,
+      supportsAutoConfig: 'cli',
       getConfigExample: (npmExecutable: string, installPath: string) =>
         `codex mcp add payments-mcp -- ${npmExecutable} --silent -C ${installPath} run start`,
       getInstructions: () => [
@@ -69,7 +75,7 @@ export class ConfigService {
     gemini: {
       displayName: 'Gemini CLI',
       configPath: (homeDir: string) => `${homeDir}/.gemini/settings.json`,
-      supportsAutoConfig: true,
+      supportsAutoConfig: 'cli',
       getConfigExample: (npmExecutable: string, installPath: string) =>
         `gemini mcp add payments-mcp --command "${npmExecutable}" --args "--silent,-C,${installPath},run,start"`,
       getInstructions: () => [
@@ -167,15 +173,16 @@ export class ConfigService {
     }
 
     // Show CLI command or JSON config based on client type
-    const label = clientInfo?.supportsAutoConfig
-      ? 'Run this command to configure:'
-      : 'Add the following configuration:';
+    const label =
+      clientInfo?.supportsAutoConfig === 'cli'
+        ? 'Run this command to configure:'
+        : 'Add the following configuration:';
     this.logger.info(label);
     this.logger.newline();
     console.log(chalk.cyan(clientConfig.configExample));
 
     // For CLI-based clients, also show JSON backup option
-    if (clientInfo?.supportsAutoConfig) {
+    if (clientInfo?.supportsAutoConfig === 'cli') {
       const npmExecutable = PathUtils.getNpmExecutable();
       this.logger.newline();
       this.logger.info('Or manually add this JSON to your config file:');
@@ -282,5 +289,254 @@ export class ConfigService {
     this.generateTroubleshootingInfo().forEach((line) => {
       console.log(getLineColor(line)(line));
     });
+  }
+
+  /**
+   * Automatically configure an MCP client by creating or updating its config file
+   * Currently supports clients with JSON-based configuration files
+   */
+  async autoConfigureFile(
+    mcpClient: MCPClient,
+    installPath: string
+  ): Promise<boolean> {
+    const configPath = this.getConfigPath(mcpClient);
+
+    if (!configPath) {
+      this.logger.warn(
+        `Unable to determine config path for ${mcpClient} on this platform`
+      );
+      return false;
+    }
+
+    const clientInfo = this.clientRegistry[mcpClient];
+    if (!clientInfo) {
+      this.logger.warn(`Unsupported MCP client: ${mcpClient}`);
+      return false;
+    }
+
+    // Only auto-configure clients that support file-based config
+    // (CLI-based clients should use their own CLI commands via autoConfigureCLI)
+    if (clientInfo.supportsAutoConfig !== 'file') {
+      this.logger.debug(
+        `${clientInfo.displayName} does not support file-based auto-config`
+      );
+      return false;
+    }
+
+    try {
+      const npmExecutable = PathUtils.getNpmExecutable();
+      const paymentsMcpConfig = {
+        command: npmExecutable,
+        args: ['--silent', '-C', installPath, 'run', 'start'],
+      };
+
+      // Ensure the directory exists
+      const configDir = path.dirname(configPath);
+      await fs.ensureDir(configDir);
+
+      // Read existing config or create new one
+      let existingConfig: MCPServerConfig;
+
+      if (await fs.pathExists(configPath)) {
+        this.logger.debug(`Reading existing config from ${configPath}`);
+        const fileContent = await fs.readFile(configPath, 'utf-8');
+
+        try {
+          existingConfig = JSON.parse(fileContent);
+
+          // Ensure mcpServers object exists
+          if (
+            !existingConfig.mcpServers ||
+            typeof existingConfig.mcpServers !== 'object'
+          ) {
+            existingConfig.mcpServers = {};
+          }
+        } catch (parseError) {
+          this.logger.warn(
+            'Existing config file is malformed, creating backup and starting fresh'
+          );
+          // Backup the malformed file
+          await fs.copy(configPath, `${configPath}.backup.${Date.now()}`);
+          existingConfig = { mcpServers: {} };
+        }
+
+        // Check if payments-mcp already exists
+        if (existingConfig.mcpServers['payments-mcp']) {
+          this.logger.debug('payments-mcp config already exists, updating...');
+        } else {
+          this.logger.debug('Adding payments-mcp to existing config');
+        }
+
+        // Merge or update the payments-mcp config
+        existingConfig.mcpServers['payments-mcp'] = paymentsMcpConfig;
+      } else {
+        this.logger.debug(
+          `Config file doesn't exist, creating new one at ${configPath}`
+        );
+        existingConfig = {
+          mcpServers: {
+            'payments-mcp': paymentsMcpConfig,
+          },
+        };
+      }
+
+      // Write the config back
+      await fs.writeFile(
+        configPath,
+        JSON.stringify(existingConfig, null, 2),
+        'utf-8'
+      );
+
+      this.logger.success(
+        `${clientInfo.displayName} config updated at ${configPath}`
+      );
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Failed to auto-configure ${clientInfo.displayName}`,
+        error as Error
+      );
+      this.logger.warn(
+        'You can manually configure using the instructions shown above'
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Automatically configure an MCP client using its CLI command
+   * Supports clients with CLI-based configuration tools
+   */
+  async autoConfigureCLI(
+    mcpClient: MCPClient,
+    installPath: string
+  ): Promise<boolean> {
+    const clientInfo = this.clientRegistry[mcpClient];
+    if (!clientInfo) {
+      this.logger.warn(`Unsupported MCP client: ${mcpClient}`);
+      return false;
+    }
+
+    // Only auto-configure clients that support CLI-based config
+    if (clientInfo.supportsAutoConfig !== 'cli') {
+      this.logger.debug(
+        `${clientInfo.displayName} does not support CLI-based auto-config`
+      );
+      return false;
+    }
+
+    try {
+      const npmExecutable = PathUtils.getNpmExecutable();
+      const command = clientInfo.getConfigExample(npmExecutable, installPath);
+
+      this.logger.debug(`Executing CLI command: ${command}`);
+
+      // Execute the CLI command
+      const { stdout, stderr } = await execAsync(command, {
+        timeout: 30000, // 30 second timeout
+      });
+
+      if (stdout) {
+        this.logger.debug(`CLI output: ${stdout.trim()}`);
+      }
+
+      if (stderr) {
+        this.logger.debug(`CLI stderr: ${stderr.trim()}`);
+      }
+
+      this.logger.success(
+        `${clientInfo.displayName} configured successfully via CLI`
+      );
+      return true;
+    } catch (error) {
+      const err = error as Error & { code?: string; stderr?: string };
+
+      // Check if the CLI tool itself is not found
+      if (err.code === 'ENOENT' || err.message.includes('not found')) {
+        this.logger.warn(
+          `${clientInfo.displayName} CLI tool not found. Please install it first or configure manually.`
+        );
+      } else {
+        this.logger.error(
+          `Failed to auto-configure ${clientInfo.displayName} via CLI`,
+          err
+        );
+        if (err.stderr) {
+          this.logger.debug(`Command stderr: ${err.stderr}`);
+        }
+      }
+
+      this.logger.warn(
+        'You can manually configure using the instructions shown above'
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Check if an MCP client's config file exists
+   */
+  async configFileExists(mcpClient: MCPClient): Promise<boolean> {
+    const configPath = this.getConfigPath(mcpClient);
+    if (!configPath) {
+      return false;
+    }
+    return fs.pathExists(configPath);
+  }
+
+  /**
+   * Read an MCP client's config file
+   */
+  async readConfigFile(mcpClient: MCPClient): Promise<MCPServerConfig | null> {
+    const configPath = this.getConfigPath(mcpClient);
+    if (!configPath || !(await fs.pathExists(configPath))) {
+      return null;
+    }
+
+    try {
+      const fileContent = await fs.readFile(configPath, 'utf-8');
+      return JSON.parse(fileContent);
+    } catch (error) {
+      this.logger.debug(
+        `Failed to read ${mcpClient} config: ${(error as Error).message}`
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Check if a client supports automatic file configuration
+   */
+  supportsAutoFileConfig(mcpClient: MCPClient): boolean {
+    const clientInfo = this.clientRegistry[mcpClient];
+    if (!clientInfo) {
+      return false;
+    }
+    return (
+      clientInfo.supportsAutoConfig === 'file' &&
+      !!this.getConfigPath(mcpClient)
+    );
+  }
+
+  /**
+   * Check if a client supports automatic CLI-based configuration
+   */
+  supportsAutoCLIConfig(mcpClient: MCPClient): boolean {
+    const clientInfo = this.clientRegistry[mcpClient];
+    if (!clientInfo) {
+      return false;
+    }
+    return clientInfo.supportsAutoConfig === 'cli';
+  }
+
+  /**
+   * Check if a client supports any form of automatic configuration
+   */
+  supportsAnyAutoConfig(mcpClient: MCPClient): boolean {
+    const clientInfo = this.clientRegistry[mcpClient];
+    if (!clientInfo) {
+      return false;
+    }
+    return clientInfo.supportsAutoConfig !== false;
   }
 }

@@ -25,9 +25,32 @@ You can also specify the client directly:
 npx @coinbase/payments-mcp --client <client>
 ```
 
-### 3) Follow the installation instructions:
+### 3) Automatic Configuration (Optional):
 
-After installation, detailed configuration instructions specific to your chosen MCP client will be displayed.
+The installer supports **automatic configuration** for compatible MCP clients:
+
+**File-based (Claude Desktop):**
+- Automatically creates or updates the configuration file
+- Merges with existing MCP servers without overwriting
+- Backs up malformed configs before fixing
+
+**CLI-based (Claude Code, Codex, Gemini):**
+- Executes the client's configuration CLI command
+- Automatically adds payments-mcp using the client's native tools
+
+You'll be prompted during installation, or you can:
+
+```bash
+# Automatically configure without prompting
+npx @coinbase/payments-mcp --client claude --auto-config
+
+# Skip automatic configuration
+npx @coinbase/payments-mcp --client claude --no-auto-config
+```
+
+### 4) Manual Configuration (If Needed):
+
+If you skip automatic configuration, detailed setup instructions will be displayed.
 
 #### Example Configuration:
 ```json
@@ -68,24 +91,30 @@ npx @coinbase/payments-mcp install --verbose
 ### Options
 
 - `--client, -c <client>`: Specify MCP client to configure (claude, claude-code, codex, gemini, other)
+- `--auto-config`: Automatically configure the MCP client without prompting (for supported clients)
+- `--no-auto-config`: Skip automatic configuration prompt
 - `--verbose, -v`: Enable detailed logging output
 - `--force, -f`: Force reinstallation even if already up to date
 - `--help, -h`: Show help information
 
 ### Supported MCP Clients
 
-| Client | Value | Description |
-|------|-------|-------------|
-| Claude Desktop | `claude` | Claude Desktop application |
-| Claude Code | `claude-code` | Claude Code CLI tool |
-| Codex CLI | `codex` | OpenAI Codex CLI tool |
-| Gemini CLI | `gemini` | Google Gemini CLI tool |
-| Other | `other` | Other stdio-compatible MCP clients |
+| Client | Value | Description | Auto-Config |
+|------|-------|-------------|-------------|
+| Claude Desktop | `claude` | Claude Desktop application | ✅ File-based |
+| Claude Code | `claude-code` | Claude Code CLI tool | ✅ CLI-based |
+| Codex CLI | `codex` | OpenAI Codex CLI tool | ✅ CLI-based |
+| Gemini CLI | `gemini` | Google Gemini CLI tool | ✅ CLI-based |
+| Other | `other` | Other stdio-compatible MCP clients | Manual only |
+
+**Auto-Config Support**:
+- ✅ **File-based**: Automatically creates/updates JSON configuration file
+- ✅ **CLI-based**: Executes the client's native CLI configuration command
+- **Manual only**: Manual configuration required (instructions provided after installation)
 
 ### File Locations
 
 - **Installation Directory**: `~/.payments-mcp/`
-- **Configuration Files**: Generated during installation
 - **Logs**: Displayed in terminal (use `--verbose` for detailed logs)
 
 ## How It Works

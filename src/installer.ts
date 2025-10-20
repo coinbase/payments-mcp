@@ -42,7 +42,12 @@ export class PaymentsMCPInstaller {
       // Prompt for MCP client selection if not provided
       const mcpClient = options.mcpClient || (await this.promptForMCPClient());
 
-      await this.postInstallSetup(installPath, versionInfo.remote, mcpClient);
+      await this.postInstallSetup(
+        installPath,
+        versionInfo.remote,
+        mcpClient,
+        options.autoConfig
+      );
 
       this.logger.success('Installation completed successfully!');
     } catch (error) {
@@ -154,7 +159,8 @@ export class PaymentsMCPInstaller {
   private async postInstallSetup(
     installPath: string,
     version: string,
-    mcpClient: MCPClient
+    mcpClient: MCPClient,
+    autoConfig?: boolean
   ): Promise<void> {
     this.logger.info('Configuring MCP client integration...');
 
@@ -166,10 +172,157 @@ export class PaymentsMCPInstaller {
     }
 
     this.configService.displayInstallationSummary(installPath, version);
+
+    // Offer automatic configuration for supported clients (both file-based and CLI-based)
+    if (this.configService.supportsAnyAutoConfig(mcpClient)) {
+      await this.handleAutoConfiguration(mcpClient, installPath, autoConfig);
+    }
+
     this.configService.displayConfigInstructionsForClient(
       mcpClient,
       installPath
     );
+  }
+
+  private async handleAutoConfiguration(
+    mcpClient: MCPClient,
+    installPath: string,
+    autoConfig?: boolean
+  ): Promise<void> {
+    try {
+      const clientConfig = this.configService.getMCPClientConfig(
+        mcpClient,
+        installPath
+      );
+
+      // Determine which type of auto-config is supported
+      const supportsFileConfig =
+        this.configService.supportsAutoFileConfig(mcpClient);
+      const supportsCLIConfig =
+        this.configService.supportsAutoCLIConfig(mcpClient);
+
+      // If autoConfig is explicitly false, skip entirely
+      if (autoConfig === false) {
+        this.logger.debug('Auto-config disabled via command line option');
+        return;
+      }
+
+      // If autoConfig is explicitly true, configure without prompting
+      if (autoConfig === true) {
+        this.logger.newline();
+        this.logger.info(`Configuring ${clientConfig.name} automatically...`);
+
+        let success: boolean;
+        if (supportsFileConfig) {
+          success = await this.configService.autoConfigureFile(
+            mcpClient,
+            installPath
+          );
+        } else if (supportsCLIConfig) {
+          success = await this.configService.autoConfigureCLI(
+            mcpClient,
+            installPath
+          );
+        } else {
+          this.logger.warn('Auto-configuration not supported for this client');
+          return;
+        }
+
+        if (success) {
+          this.logger.newline();
+          this.logger.success(
+            `✓ ${clientConfig.name} configured successfully!`
+          );
+          this.logger.info(
+            `  Please restart ${clientConfig.name} to use payments-mcp`
+          );
+          this.logger.newline();
+        }
+        return;
+      }
+
+      // Otherwise, prompt the user
+      this.logger.newline();
+      this.logger.info(
+        `🚀 Automatic ${clientConfig.name} configuration available!`
+      );
+      this.logger.newline();
+
+      // Prepare message based on config type
+      let message: string;
+      if (supportsFileConfig) {
+        const configExists =
+          await this.configService.configFileExists(mcpClient);
+
+        if (configExists) {
+          const existingConfig =
+            await this.configService.readConfigFile(mcpClient);
+          const hasPaymentsMcp = existingConfig?.mcpServers?.['payments-mcp'];
+
+          if (hasPaymentsMcp) {
+            message = `Update existing payments-mcp configuration in ${clientConfig.name}?`;
+          } else {
+            message = `Add payments-mcp to your existing ${clientConfig.name} configuration?`;
+          }
+        } else {
+          message = `Create ${clientConfig.name} configuration file with payments-mcp?`;
+        }
+      } else if (supportsCLIConfig) {
+        message = `Automatically configure ${clientConfig.name} using its CLI tool?`;
+      } else {
+        this.logger.warn('Auto-configuration not supported for this client');
+        return;
+      }
+
+      const answers = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'autoConfig',
+          message,
+          default: true,
+        },
+      ]);
+
+      if (answers.autoConfig) {
+        this.logger.info(`Configuring ${clientConfig.name}...`);
+
+        let success: boolean;
+        if (supportsFileConfig) {
+          success = await this.configService.autoConfigureFile(
+            mcpClient,
+            installPath
+          );
+        } else if (supportsCLIConfig) {
+          success = await this.configService.autoConfigureCLI(
+            mcpClient,
+            installPath
+          );
+        } else {
+          success = false;
+        }
+
+        if (success) {
+          this.logger.newline();
+          this.logger.success(
+            `✓ ${clientConfig.name} configured successfully!`
+          );
+          this.logger.info(
+            `  Please restart ${clientConfig.name} to use payments-mcp`
+          );
+          this.logger.newline();
+        }
+      } else {
+        this.logger.info('Skipping automatic configuration');
+        this.logger.info(
+          'Manual configuration instructions will be shown below'
+        );
+      }
+    } catch (error) {
+      this.logger.debug(
+        `Auto-config prompt failed: ${(error as Error).message}`
+      );
+      // Installer will still show manual instructions after this
+    }
   }
 
   private async displayCurrentConfig(mcpClient?: MCPClient): Promise<void> {

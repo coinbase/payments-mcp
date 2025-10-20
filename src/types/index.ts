@@ -2,6 +2,7 @@ export interface InstallOptions {
   verbose?: boolean;
   force?: boolean;
   mcpClient?: MCPClient;
+  autoConfig?: boolean;
 }
 
 export interface VersionInfo {

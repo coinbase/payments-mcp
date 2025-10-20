@@ -5,6 +5,7 @@ import { PathUtils } from './pathUtils';
 
 export class FileUtils {
   private logger: Logger;
+  private ensuredDirs: Set<string> = new Set();
 
   constructor(logger: Logger) {
     this.logger = logger;
@@ -21,8 +22,12 @@ export class FileUtils {
 
   async ensureDir(dirPath: string): Promise<void> {
     try {
-      await fs.ensureDir(dirPath);
-      this.logger.debug(`Ensured directory exists: ${dirPath}`);
+      // Only actually ensure and log if we haven't done this directory yet
+      if (!this.ensuredDirs.has(dirPath)) {
+        await fs.ensureDir(dirPath);
+        this.logger.debug(`Ensured directory exists: ${dirPath}`);
+        this.ensuredDirs.add(dirPath);
+      }
     } catch (error) {
       throw new Error(
         `Failed to create directory ${dirPath}: ${(error as Error).message}`

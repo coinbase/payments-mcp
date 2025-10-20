@@ -41,9 +41,8 @@ export class ConfigService {
         ),
       getInstructions: () => [
         'Open Claude Desktop application',
-        'Go to Settings → Developer → MCP Servers',
-        'Click "Edit Config" or add the configuration manually',
-        'Add the configuration shown above',
+        'Go to Settings → Developer → Local MCP Servers',
+        'Click "Edit Config" and add the configuration shown above',
         'Save the configuration file',
         'Restart Claude Desktop',
       ],
@@ -123,7 +122,7 @@ export class ConfigService {
     };
   }
 
-  private getConfigPath(mcpClient: MCPClient): string | undefined {
+  public getConfigPath(mcpClient: MCPClient): string | undefined {
     const clientInfo = this.clientRegistry[mcpClient];
     if (!clientInfo?.configPath) {
       return undefined;

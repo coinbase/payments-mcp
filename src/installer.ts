@@ -174,21 +174,29 @@ export class PaymentsMCPInstaller {
     this.configService.displayInstallationSummary(installPath, version);
 
     // Offer automatic configuration for supported clients (both file-based and CLI-based)
+    let autoConfigSucceeded = false;
     if (this.configService.supportsAnyAutoConfig(mcpClient)) {
-      await this.handleAutoConfiguration(mcpClient, installPath, autoConfig);
+      autoConfigSucceeded = await this.handleAutoConfiguration(
+        mcpClient,
+        installPath,
+        autoConfig
+      );
     }
 
-    this.configService.displayConfigInstructionsForClient(
-      mcpClient,
-      installPath
-    );
+    // Only show manual instructions if auto-config didn't succeed
+    if (!autoConfigSucceeded) {
+      this.configService.displayConfigInstructionsForClient(
+        mcpClient,
+        installPath
+      );
+    }
   }
 
   private async handleAutoConfiguration(
     mcpClient: MCPClient,
     installPath: string,
     autoConfig?: boolean
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       const clientConfig = this.configService.getMCPClientConfig(
         mcpClient,
@@ -204,7 +212,7 @@ export class PaymentsMCPInstaller {
       // If autoConfig is explicitly false, skip entirely
       if (autoConfig === false) {
         this.logger.debug('Auto-config disabled via command line option');
-        return;
+        return false;
       }
 
       // If autoConfig is explicitly true, configure without prompting
@@ -225,20 +233,27 @@ export class PaymentsMCPInstaller {
           );
         } else {
           this.logger.warn('Auto-configuration not supported for this client');
-          return;
+          return false;
         }
 
         if (success) {
           this.logger.newline();
-          this.logger.success(
-            `✓ ${clientConfig.name} configured successfully!`
-          );
+          const configPath = this.configService.getConfigPath(mcpClient);
+          if (configPath) {
+            this.logger.success(
+              `Configuration added to ${configPath} successfully.`
+            );
+          } else {
+            this.logger.success(
+              `${clientConfig.name} configured successfully!`
+            );
+          }
           this.logger.info(
-            `  Please restart ${clientConfig.name} to use payments-mcp`
+            `Please restart ${clientConfig.name} to use payments-mcp`
           );
           this.logger.newline();
         }
-        return;
+        return success;
       }
 
       // Otherwise, prompt the user
@@ -271,7 +286,7 @@ export class PaymentsMCPInstaller {
         message = `Automatically configure ${clientConfig.name} using its CLI tool?`;
       } else {
         this.logger.warn('Auto-configuration not supported for this client');
-        return;
+        return false;
       }
 
       const answers = await inquirer.prompt([
@@ -303,25 +318,35 @@ export class PaymentsMCPInstaller {
 
         if (success) {
           this.logger.newline();
-          this.logger.success(
-            `✓ ${clientConfig.name} configured successfully!`
-          );
+          const configPath = this.configService.getConfigPath(mcpClient);
+          if (configPath) {
+            this.logger.success(
+              `Configuration added to ${configPath} successfully.`
+            );
+          } else {
+            this.logger.success(
+              `${clientConfig.name} configured successfully!`
+            );
+          }
           this.logger.info(
-            `  Please restart ${clientConfig.name} to use payments-mcp`
+            `Please restart ${clientConfig.name} to use payments-mcp`
           );
           this.logger.newline();
         }
+        return success;
       } else {
         this.logger.info('Skipping automatic configuration');
         this.logger.info(
           'Manual configuration instructions will be shown below'
         );
+        return false;
       }
     } catch (error) {
       this.logger.debug(
         `Auto-config prompt failed: ${(error as Error).message}`
       );
-      // Installer will still show manual instructions after this
+      // Return false to show manual instructions
+      return false;
     }
   }
 

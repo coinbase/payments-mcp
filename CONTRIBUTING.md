@@ -57,31 +57,6 @@ src/
    npm run dev
    ```
 
-## Development Commands
-
-```bash
-# Install dependencies
-npm install
-
-# Build TypeScript
-npm run build
-
-# Test locally
-npm run dev
-
-# Run tests
-npm test
-
-# Run linting
-npm run lint
-
-# Format code
-npm run format
-
-# Watch mode for development
-npm run dev:watch
-```
-
 ## Pull Request Workflow
 
 1. **Create a Feature Branch**
@@ -157,6 +132,46 @@ Signed commits are required for all contributions. Follow these steps:
    ```
 
 For more details, see [GitHub's documentation on signing commits](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits).
+
+## Publishing New Versions
+
+This project uses a standard tag-based release workflow. To publish a new version:
+
+### 1. Bump the version
+
+Use npm's built-in version command to update `package.json` and create a git tag:
+
+```bash
+# For bug fixes (1.0.0 → 1.0.1)
+npm version patch
+
+# For new features (1.0.0 → 1.1.0)
+npm version minor
+
+# For breaking changes (1.0.0 → 2.0.0)
+npm version major
+```
+
+This automatically:
+- Updates `package.json` and `package-lock.json`
+- Creates a git commit with the version change
+- Creates a git tag (e.g., `v1.0.1`)
+
+### 2. Push the tag
+
+```bash
+git push && git push --tags
+```
+
+### 3. Automatic deployment
+
+Once the tag is pushed, the GitHub Actions workflow will automatically:
+- Run tests and linting
+- Build the project
+- Verify the version matches the tag
+- Publish to NPM with provenance
+
+**Note**: The workflow only triggers on tags matching the pattern `v*.*.*` (e.g., `v1.0.0`, `v2.1.3`).
 
 ## Code Guidelines
 

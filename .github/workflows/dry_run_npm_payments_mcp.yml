@@ -1,15 +1,11 @@
-name: Dry Run NPM Publish
+name: Verify Package
 
 on:
+  pull_request:
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to test (e.g., v1.0.0)'
-        required: true
-        type: string
 
 permissions:
-  id-token: write # Required for OIDC trusted publishing
   contents: read
 
 jobs:
@@ -41,7 +37,7 @@ jobs:
       - name: Build project
         run: npm run build
 
-  dry-run:
+  verify-package:
     needs: test
     runs-on: ubuntu-latest
 
@@ -56,56 +52,40 @@ jobs:
           cache: 'npm'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Update npm to latest
-        run: npm install -g npm@latest
-
-      - name: Configure npm for trusted publishing
-        run: |
-          npm config delete always-auth 2>/dev/null || true
-
       - name: Install dependencies
         run: npm ci
 
       - name: Build project
         run: npm run build
 
-      - name: Extract version from input
+      - name: Get current version
         id: version
         run: |
-          VERSION=${{ github.event.inputs.version }}
-          VERSION=${VERSION#v}
+          VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Testing version: $VERSION"
-
-      - name: Update package.json version
-        run: |
-          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+          echo "Current version: $VERSION"
 
       - name: Verify package contents
         run: |
-          echo "Package contents:"
+          echo "📦 Package contents preview:"
           npm pack --dry-run
 
-      - name: Dry Run NPM Publish
+      - name: Verify publish readiness
         run: |
-          echo "🧪 Running dry run publish..."
+          echo "🧪 Verifying package can be published..."
           npm publish --dry-run --access public
-          echo "✅ Dry run completed successfully!"
-          echo ""
-          echo "📦 Package would be published as: @coinbase/payments-mcp@${{ steps.version.outputs.version }}"
-          echo "🎯 Install command would be: npx @coinbase/payments-mcp@${{ steps.version.outputs.version }}"
+          echo "✅ Package verification successful!"
 
-      - name: Generate publish summary
+      - name: Generate summary
         run: |
-          echo "## 🧪 Dry Run Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Package Verification" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ All checks passed! Package is ready for publishing." >> $GITHUB_STEP_SUMMARY
+          echo "All checks passed! Package is ready for publishing." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Package:** \`@coinbase/payments-mcp@${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Current version:** \`${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Install command:**" >> $GITHUB_STEP_SUMMARY
+          echo "**To publish a new release:**" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "npx @coinbase/payments-mcp@${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "npm version patch  # or minor/major" >> $GITHUB_STEP_SUMMARY
+          echo "git push --follow-tags" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "To publish for real, run the **Deploy to NPM** workflow." >> $GITHUB_STEP_SUMMARY

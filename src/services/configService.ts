@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import fs from 'fs-extra';
+import os from 'os';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -120,7 +121,7 @@ export class ConfigService {
       return undefined;
     }
 
-    const homeDir = require('os').homedir();
+    const homeDir = os.homedir();
     return clientInfo.configPath(homeDir) || undefined;
   }
 

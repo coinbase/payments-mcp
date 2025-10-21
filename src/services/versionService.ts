@@ -1,5 +1,9 @@
 import semver from 'semver';
-import { VersionInfo, InstallationStatus, RemoteVersionResponse } from '../types';
+import {
+  VersionInfo,
+  InstallationStatus,
+  RemoteVersionResponse,
+} from '../types';
 import { HttpUtils } from '../utils/httpUtils';
 import { FileUtils } from '../utils/fileUtils';
 import { PathUtils } from '../utils/pathUtils';
@@ -21,7 +25,7 @@ export class VersionService {
   async getLocalVersion(): Promise<string | null> {
     try {
       const paths = PathUtils.getInstallationPaths();
-      
+
       if (!(await this.fileUtils.exists(paths.packageJsonPath))) {
         this.logger.debug('No local package.json found');
         return null;
@@ -31,7 +35,7 @@ export class VersionService {
         version?: string;
       }>(paths.packageJsonPath);
       const version = packageJson.version;
-      
+
       if (!version) {
         this.logger.warn('Local package.json exists but has no version field');
         return null;
@@ -40,7 +44,9 @@ export class VersionService {
       this.logger.debug(`Found local version: ${version}`);
       return version;
     } catch (error) {
-      this.logger.debug(`Failed to read local version: ${(error as Error).message}`);
+      this.logger.debug(
+        `Failed to read local version: ${(error as Error).message}`,
+      );
       return null;
     }
   }
@@ -48,15 +54,17 @@ export class VersionService {
   async getRemoteVersion(): Promise<string> {
     try {
       this.logger.debug(`Fetching remote version from ${this.versionApiUrl}`);
-      const response = await this.httpUtils.get<RemoteVersionResponse>(this.versionApiUrl);
-      
+      const response = await this.httpUtils.get<RemoteVersionResponse>(
+        this.versionApiUrl,
+      );
+
       if (!response.data || !response.data.version) {
         throw new Error('Invalid response format from version API');
       }
 
       const version = response.data.version;
       this.logger.debug(`Remote version: ${version}`);
-      
+
       if (!semver.valid(version)) {
         throw new Error(`Invalid semver format from remote API: ${version}`);
       }
@@ -68,14 +76,19 @@ export class VersionService {
     }
   }
 
-  async compareVersions(localVersion: string | null, remoteVersion: string): Promise<boolean> {
+  async compareVersions(
+    localVersion: string | null,
+    remoteVersion: string,
+  ): Promise<boolean> {
     if (!localVersion) {
       this.logger.debug('No local version found, update needed');
       return true;
     }
 
     if (!semver.valid(localVersion)) {
-      this.logger.warn(`Invalid local version format: ${localVersion}, forcing update`);
+      this.logger.warn(
+        `Invalid local version format: ${localVersion}, forcing update`,
+      );
       return true;
     }
 
@@ -84,8 +97,10 @@ export class VersionService {
     }
 
     const needsUpdate = semver.gt(remoteVersion, localVersion);
-    this.logger.debug(`Version comparison: local=${localVersion}, remote=${remoteVersion}, needsUpdate=${needsUpdate}`);
-    
+    this.logger.debug(
+      `Version comparison: local=${localVersion}, remote=${remoteVersion}, needsUpdate=${needsUpdate}`,
+    );
+
     return needsUpdate;
   }
 
@@ -100,13 +115,13 @@ export class VersionService {
       } catch (error) {
         this.logger.warn('Unable to fetch remote version information');
         this.logger.debug(
-          `Remote version fetch error: ${(error as Error).message}`
+          `Remote version fetch error: ${(error as Error).message}`,
         );
 
         // If no local version exists, assume fresh install with a default version
         if (!localVersion) {
           this.logger.info(
-            'Proceeding with installation using latest available version'
+            'Proceeding with installation using latest available version',
           );
           return {
             local: null,
@@ -118,7 +133,7 @@ export class VersionService {
         // If local version exists, we can't determine if update is needed
         // Return current local version as remote and mark as up-to-date
         this.logger.info(
-          'Cannot check for updates, assuming current version is up-to-date'
+          'Cannot check for updates, assuming current version is up-to-date',
         );
         return {
           local: localVersion,
@@ -127,7 +142,10 @@ export class VersionService {
         };
       }
 
-      const needsUpdate = await this.compareVersions(localVersion, remoteVersion);
+      const needsUpdate = await this.compareVersions(
+        localVersion,
+        remoteVersion,
+      );
 
       return {
         local: localVersion,
@@ -135,16 +153,19 @@ export class VersionService {
         needsUpdate,
       };
     } catch (error) {
-      throw new Error(`Failed to get version information: ${(error as Error).message}`);
+      throw new Error(
+        `Failed to get version information: ${(error as Error).message}`,
+      );
     }
   }
 
   async getInstallationStatus(): Promise<InstallationStatus> {
     try {
       const paths = PathUtils.getInstallationPaths();
-      const isInstalled = await this.fileUtils.exists(paths.installDir) && 
-                         await this.fileUtils.exists(paths.packageJsonPath);
-      
+      const isInstalled =
+        (await this.fileUtils.exists(paths.installDir)) &&
+        (await this.fileUtils.exists(paths.packageJsonPath));
+
       const version = isInstalled ? await this.getLocalVersion() : null;
 
       return {
@@ -153,7 +174,9 @@ export class VersionService {
         installPath: paths.installDir,
       };
     } catch (error) {
-      this.logger.debug(`Failed to get installation status: ${(error as Error).message}`);
+      this.logger.debug(
+        `Failed to get installation status: ${(error as Error).message}`,
+      );
       return {
         isInstalled: false,
         version: null,
@@ -175,21 +198,21 @@ export class VersionService {
 
   formatVersionInfo(versionInfo: VersionInfo): string {
     const lines: string[] = [];
-    
+
     if (versionInfo.local) {
       lines.push(`Local version: ${versionInfo.local}`);
     } else {
       lines.push('Local version: Not installed');
     }
-    
+
     lines.push(`Remote version: ${versionInfo.remote}`);
-    
+
     if (versionInfo.needsUpdate) {
       lines.push('Status: Update available');
     } else {
       lines.push('Status: Up to date');
     }
-    
+
     return lines.join('\n');
   }
 }

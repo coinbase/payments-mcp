@@ -14,14 +14,8 @@ module.exports = {
   },
   rules: {
     // TypeScript specific rules
-    '@typescript-eslint/no-unused-vars': [
-      'error',
-      { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
-    ],
-    'no-unused-vars': [
-      'error',
-      { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
-    ],
+    '@typescript-eslint/no-unused-vars': ['error'],
+    'no-unused-vars': ['error'],
     '@typescript-eslint/no-explicit-any': 'warn',
     // Basic ESLint rules that work well with TypeScript
     'no-console': 'off',

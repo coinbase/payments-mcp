@@ -123,8 +123,8 @@ getConfigPath(): string | null                                  // Platform path
 {
   "mcpServers": {
     "payments-mcp": {
-      "command": "npm",
-      "args": ["--silent", "-C", "path/to/installation", "run", "start"],
+      "command": "node",
+      "args": ["path/to/installation/bundle.js"]
     }
   }
 }

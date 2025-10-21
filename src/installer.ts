@@ -374,7 +374,9 @@ export class PaymentsMCPInstaller {
         this.logger.info(
           'To view configuration instructions for your MCP client, run:'
         );
-        this.logger.info('  npx install-payments-mcp status --client <client>');
+        this.logger.info(
+          '  npx @coinbase/payments-mcp status --client <client>',
+        );
         this.logger.newline();
         this.logger.info(
           'Available clients: claude, claude-code, codex, gemini, other'

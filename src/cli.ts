@@ -110,14 +110,14 @@ program.configureHelp({
 program.on('--help', () => {
   console.log('');
   console.log('Examples:');
-  console.log('  $ npx install-payments-mcp');
-  console.log('  $ npx install-payments-mcp install');
-  console.log('  $ npx install-payments-mcp install --force');
-  console.log('  $ npx install-payments-mcp install --client <client>');
-  console.log('  $ npx install-payments-mcp status');
-  console.log('  $ npx install-payments-mcp status --client <client>');
-  console.log('  $ npx install-payments-mcp uninstall');
-  console.log('  $ npx install-payments-mcp --verbose');
+  console.log('  $ npx @coinbase/payments-mcp');
+  console.log('  $ npx @coinbase/payments-mcp install');
+  console.log('  $ npx @coinbase/payments-mcp install --force');
+  console.log('  $ npx @coinbase/payments-mcp install --client <client>');
+  console.log('  $ npx @coinbase/payments-mcp status');
+  console.log('  $ npx @coinbase/payments-mcp status --client <client>');
+  console.log('  $ npx @coinbase/payments-mcp uninstall');
+  console.log('  $ npx @coinbase/payments-mcp --verbose');
   console.log('');
   console.log('Supported MCP clients:');
   console.log('  - claude: Claude Desktop application');

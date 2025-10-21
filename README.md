@@ -1,6 +1,6 @@
 # @coinbase/payments-mcp
 
-A TypeScript-based npx installer for the payments-mcp project, providing seamless integration with stdio-compatible MCP clients for cryptocurrency payments functionality.
+A TypeScript-based npx installer for the payments-mcp project, providing seamless integration with stdio-compatible MCP clients for  agentic payments via x402 and the x402 Bazaar.
 
 ## Quick Start
 
@@ -13,30 +13,15 @@ npx @coinbase/payments-mcp
 ### 2) Select your MCP client:
 
 During installation, you'll be prompted to choose which MCP client you're configuring:
-- **Claude Desktop** - Claude Desktop application
+- **Claude** - Claude Desktop application
 - **Claude Code** - Claude Code CLI
-- **Codex CLI** - OpenAI Codex CLI
-- **Google Gemini CLI** - Google Gemini CLI
+- **Codex** - OpenAI Codex CLI
+- **Gemini** - Google Gemini CLI
 - **Other** - Other MCP-compatible tools
-
-You can also specify the client directly:
-
-```bash
-npx @coinbase/payments-mcp --client <client>
-```
 
 ### 3) Automatic Configuration (Optional):
 
-The installer supports **automatic configuration** for compatible MCP clients:
-
-**File-based (e.g. Claude Desktop):**
-- Automatically creates or updates the configuration file
-- Merges with existing MCP servers without overwriting
-- Backs up malformed configs before fixing
-
-**CLI-based (e.g. Claude Code, Codex, Gemini):**
-- Executes the client's configuration CLI command
-- Automatically adds payments-mcp using the client's native tools
+The installer supports **automatic configuration** for compatible MCP clients.
 
 You'll be prompted during installation, or you can:
 
@@ -58,7 +43,7 @@ If you skip automatic configuration, detailed setup instructions will be display
   "mcpServers": {
     "payments-mcp": {
       "command": "node",
-      "args": ["~/.payments-mcp/bundle.js"]
+      "args": ["/Users/your-home-dir/.payments-mcp/bundle.js"]
     }
   }
 }
@@ -101,72 +86,16 @@ npx @coinbase/payments-mcp install --verbose
 
 | Client | Value | Description | Auto-Config |
 |------|-------|-------------|-------------|
-| Claude Desktop | `claude` | Claude Desktop application | ✅ File-based |
-| Claude Code | `claude-code` | Claude Code CLI tool | ✅ CLI-based |
-| Codex CLI | `codex` | OpenAI Codex CLI tool | ✅ CLI-based |
-| Gemini CLI | `gemini` | Google Gemini CLI tool | ✅ CLI-based |
+| Claude Desktop | `claude` | Claude Desktop application | ✅ |
+| Claude Code | `claude-code` | Claude Code CLI tool | ✅ |
+| Codex CLI | `codex` | OpenAI Codex CLI tool | ✅ |
+| Gemini CLI | `gemini` | Google Gemini CLI tool | ✅ |
 | Other | `other` | Other stdio-compatible MCP clients | Manual only |
-
-**Auto-Config Support**:
-- ✅ **File-based**: Automatically creates/updates JSON configuration file
-- ✅ **CLI-based**: Executes the client's native CLI configuration command
-- **Manual only**: Manual configuration required (instructions provided after installation)
 
 ### File Locations
 
 - **Installation Directory**: `~/.payments-mcp/`
 - **Logs**: Displayed in terminal (use `--verbose` for detailed logs)
-
-## How It Works
-
-The installer orchestrates a multi-step process using its layered architecture:
-
-### Installation Workflow
-
-```
-CLI Command → Orchestrator  →  Services →  Utilities
-     ↓             ↓              ↓           ↓
-[parse args] → [coordinate] → [execute] → [foundation]
-```
-
-**Detailed Flow**:
-
-1. **CLI Processing** (`cli.ts`)
-   - Commander.js parses command and options
-   - Creates Logger with verbose setting
-   - Instantiates PaymentsMCPInstaller
-   - Calls appropriate method (install/status/uninstall)
-
-2. **Pre-flight Checks** (Orchestrator → InstallService → PathUtils)
-   - Verify Node.js executable availability
-   - Check npm command accessibility  
-   - Test network connectivity to download server
-
-3. **Version Analysis** (Orchestrator → VersionService → HttpUtils)
-   - Read local package.json using FileUtils
-   - Fetch remote version from API using HttpUtils
-   - Compare versions with semver logic
-   - Determine if update is needed
-
-4. **Download Phase** (Orchestrator → DownloadService → HttpUtils/FileUtils)
-   - Download ZIP package with progress tracking
-   - Validate download integrity
-   - Securely extract with path sanitization
-   - Cleanup temporary download files
-
-5. **Installation Phase** (Orchestrator → InstallService → PathUtils)
-   - Execute `npm install` in extracted directory
-   - Run electron installer if available
-   - Verify installation success
-
-6. **MCP Client Selection** (Orchestrator → Interactive Prompt)
-   - Prompt user to select their MCP client (or use --client flag)
-   - Support for Claude Desktop, Claude Code, Codex CLI, Gemini CLI, and other clients
-   
-7. **Configuration** (Orchestrator → ConfigService → PathUtils)
-   - Generate MCP server config for selected MCP client
-   - Display client-specific setup instructions
-   - Provide config file locations and troubleshooting information
 
 ## Troubleshooting
 

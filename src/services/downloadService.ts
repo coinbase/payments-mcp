@@ -11,7 +11,6 @@ export class DownloadService {
   private httpUtils: HttpUtils;
   private fileUtils: FileUtils;
   private logger: Logger;
-  private readonly downloadUrl = `${PAYMENTS_MCP_BASE_URL}/install/payments-mcp-bundle.zip`;
 
   constructor(logger: Logger) {
     this.logger = logger;
@@ -19,7 +18,11 @@ export class DownloadService {
     this.fileUtils = new FileUtils(logger);
   }
 
-  async downloadAndExtract(targetPath: string): Promise<void> {
+  private getDownloadUrl(version: string): string {
+    return `${PAYMENTS_MCP_BASE_URL}/install/payments-mcp-v${version}.zip`;
+  }
+
+  async downloadAndExtract(targetPath: string, version: string): Promise<void> {
     let tempZipPath: string | null = null;
 
     try {
@@ -28,7 +31,7 @@ export class DownloadService {
       tempZipPath = await this.fileUtils.getTempFilePath('.zip');
 
       this.logger.info('Downloading payments-mcp package...');
-      await this.downloadWithProgress(tempZipPath);
+      await this.downloadWithProgress(tempZipPath, version);
 
       this.logger.info('Extracting package...');
       await this.extractZip(tempZipPath, targetPath);
@@ -49,7 +52,10 @@ export class DownloadService {
     }
   }
 
-  private async downloadWithProgress(filePath: string): Promise<void> {
+  private async downloadWithProgress(
+    filePath: string,
+    version: string,
+  ): Promise<void> {
     let lastPercent = -1;
 
     const onProgress = (progress: DownloadProgress) => {
@@ -60,13 +66,15 @@ export class DownloadService {
       }
     };
 
+    const downloadUrl = this.getDownloadUrl(version);
+
     try {
-      await this.httpUtils.downloadFile(this.downloadUrl, filePath, onProgress);
+      await this.httpUtils.downloadFile(downloadUrl, filePath, onProgress);
       console.log('');
     } catch (error) {
       console.log('');
       throw new Error(
-        `Failed to download from ${this.downloadUrl}: ${this.httpUtils.getErrorMessage(error)}`,
+        `Failed to download from ${downloadUrl}: ${this.httpUtils.getErrorMessage(error)}`,
       );
     }
   }
@@ -224,13 +232,14 @@ export class DownloadService {
     }
   }
 
-  async getDownloadUrl(): Promise<string> {
-    return this.downloadUrl;
+  async getDownloadUrlAsync(version: string): Promise<string> {
+    return this.getDownloadUrl(version);
   }
 
-  async checkDownloadAvailability(): Promise<boolean> {
+  async checkDownloadAvailability(version: string): Promise<boolean> {
     try {
-      await this.httpUtils.head(this.downloadUrl);
+      const downloadUrl = this.getDownloadUrl(version);
+      await this.httpUtils.head(downloadUrl);
       return true;
     } catch (error) {
       this.logger.debug(

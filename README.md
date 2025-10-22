@@ -1,6 +1,10 @@
 # @coinbase/payments-mcp
 
-A TypeScript-based npx installer for the payments-mcp project, providing seamless integration with stdio-compatible MCP clients for  agentic payments via x402 and the x402 Bazaar.
+Payments MCP is an MCP server & companion wallet app that combines wallets, onramps, and payments via x402 into a single solution for agentic commerce.
+
+It enables AI agents to autonomously discover and pay for services without API keys, complex seed phrases, or manual intervention.
+
+Read the [documentation](https://docs.cdp.coinbase.com/payments-mcp/welcome)
 
 ## Quick Start
 

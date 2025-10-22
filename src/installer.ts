@@ -30,9 +30,10 @@ export class PaymentsMCPInstaller {
     this.logger.newline();
 
     try {
-      await this.performPreflightChecks();
-
+      // Get version info first to determine which version to check
       const versionInfo = await this.checkVersions(options.force);
+
+      await this.performPreflightChecks(versionInfo.remote);
 
       if (!options.force && !versionInfo.needsUpdate) {
         this.logger.success('payments-mcp is already up to date!');
@@ -89,7 +90,7 @@ export class PaymentsMCPInstaller {
     return answers.mcpClient as MCPClient;
   }
 
-  private async performPreflightChecks(): Promise<void> {
+  private async performPreflightChecks(version: string): Promise<void> {
     this.logger.info('Performing pre-flight checks...');
 
     const nodeAvailable = await this.installService.checkNodeAvailability();
@@ -113,7 +114,7 @@ export class PaymentsMCPInstaller {
     }
 
     const downloadAvailable =
-      await this.downloadService.checkDownloadAvailability();
+      await this.downloadService.checkDownloadAvailability(version);
     if (!downloadAvailable) {
       this.logger.warn('Remote download server may be temporarily unavailable');
     }
@@ -217,7 +218,10 @@ export class PaymentsMCPInstaller {
     }
 
     try {
-      await this.downloadService.downloadAndExtract(paths.installDir);
+      await this.downloadService.downloadAndExtract(
+        paths.installDir,
+        versionInfo.remote,
+      );
 
       await this.installService.runNpmInstall(paths.installDir);
 

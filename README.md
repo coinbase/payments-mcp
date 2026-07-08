@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/coinbase-payments-mcp-badge.png)](https://mseep.ai/app/coinbase-payments-mcp)
+
 # @coinbase/payments-mcp
 
 Payments MCP is an MCP server & companion wallet app that combines wallets, onramps, and payments via x402 into a single solution for agentic commerce.
